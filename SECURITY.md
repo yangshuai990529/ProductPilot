@@ -14,7 +14,7 @@
 
 如果您发现任何安全缺陷（包括敏感 Token 泄漏、越权访问、RAG 注入漏洞等），请将漏洞详情发送至：
 
-`security@productpilot.org`
+`yangshuai990529@gmail.com`
 
 我们在收到您的邮件后，将在 48 小时内确认并评估漏洞，并在 7 天内推出修复版本。
 
