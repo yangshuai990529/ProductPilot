@@ -66,7 +66,7 @@ PPT Expert 专门用于将产品方案、研究报告或规划思路，转化为
 * **物理 16:9 画布与自适应缩放 (Scale Control)**：继承 `templates/html-presentation/index.html` 中的比例锁定机制，监听窗口缩放（resize）事件并动态使用 CSS `transform: scale(...)` 进行缩放，使幻灯片在任何分辨率下均保持绝对比例不出现溢出和错位。
 * **原生网页组件注入**：直接利用 HTML/CSS/SVG 将架构图、时序图、数据指标网格 and 线框原型渲染为真实的 DOM 元素。
 * **DOM 结构扁平化限制 (Don'ts)**：在普通内容页（`.slide` 容器）内部，**严禁**引入 `<div class="slide-body">`、`<div class="wrapper">` 等把除 Header/Footer 外的多个内容大块打包在一起的嵌套层。这会导致 Flexbox 的垂直 `space-between` 空间分配机制完全失效，产生内容整体下移和上部大片空白的排版故障。页面的所有核心逻辑大块（如 `slide-header`、`section-banner`、`grid-x-col`、`slide-footer`）**必须直接作为 `.slide` 容器的直系子元素 (Direct Children)**。
-* **容器高度与拉伸规范 (Do's)**：在直系子元素（如卡片组 `.grid-4-col`）内部放置子卡片时，子卡片的高度建议设置为 `height: 100%` 或 `flex-grow: 1`。严禁在直系子元素上随意使用大数值的 `margin-top`。限制单页中所有直系子元素的高度（包括 margins 和 paddings）累加**不得超过 900px**，以确保在 16:9 画布内内容绝不溢出裁剪。
+* **容器高度与拉伸规范 (Do's)**：在直系子元素（如卡片组 `.grid-4-col`）内部放置子卡片时，子卡片的高度建议设置为 `height: 100%` 或 `flex-grow: 1`。**严禁在直系子元素上使用行内样式 `style="flex: 0 0 auto;"` 或者是 `style="flex-grow: 0;"`**，这会强行覆盖 CSS 原本的自适应拉伸机制，导致在 space-between 布局下页面顶部露出大范围白色空隙。严禁在直系子元素上随意使用大数值的 `margin-top`。限制单页中所有直系子元素的高度（包括 margins 和 paddings）累加**不得超过 900px**，以确保在 16:9 画布内内容绝不溢出裁剪。
 * **自动化配图规范 (Automatic Image Generation & Embedding)**：严禁纯文字页或使用文字/灰色块占位。在渲染网页幻灯片时，必须调用内置的 `generate_image` 工具在本地 `assets/images/` 目录下生成匹配的高清配图并写入 `<img>` 标签，或使用合法的 Unsplash 相对链接。图片外层必须使用容器包裹，并声明 `width: 100%; height: 100%; object-fit: cover;` 以防止图片撑垮 Grid 网格布局。
 
 
