@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>画质设置菜单竞品分析 - ProductPilot</title>
+  <style>
+
+    /* ==============================================================================
+       1. 设计系统变量 (Design System Variables) - TCL 官方白底风格
+       ============================================================================== */
+    :root {
+      --color-primary: #E60012;
+      --color-primary-rgb: 230, 0, 18;
+      --color-primary-light: #FFE5E8;
+      --color-bg-light: #FFFFFF;
+      --color-card-bg: #F4F5F7;
+      --color-card-bg-alt: #FAFBFC;
+      --color-border: #E5E7EB;
+      --color-border-dark: #D1D5DB;
+      --color-text-primary: #1A1A1A;
+      --color-text-secondary: #555555;
+      --color-text-tertiary: #888888;
+      --color-text-light: #FFFFFF;
+      --color-accent-blue: #2563EB;
+      --color-accent-green: #059669;
+      --color-accent-amber: #D97706;
+    }
+
+    /* ==============================================================================
+       2. 基础重置与画布比例控制 (16:9 Fit Canvas)
+       ============================================================================== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: #D1D5DB;
+      color: var(--color-text-primary);
+      font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", Arial, sans-serif;
+      overflow-y: auto;
+      overflow-x: auto;
+      width: 100%;
+      margin: 0;
+      padding: 24px 0;
+    }
+
+    /* PDF 滚动模式：#deck-container 和 #deck 作为纵向堆叠容器 */
+    #deck-container {
+      width: 1920px;
+      margin: 0 auto;
+      background: transparent;
+    }
+
+    #deck {
+      width: 1920px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      align-items: center;
+      background: transparent;
+    }
+
+    /* ==============================================================================
+       3. PDF 滚动模式 — 幻灯片静态纵向展示 (Scroll Layout)
+       ============================================================================== */
+    .slide {
+      position: relative;          /* 不再绝对定位 */
+      width: 1920px;
+      height: 1080px;
+      flex-shrink: 0;              /* 不允许被压缩 */
+      opacity: 1;                  /* 全部可见 */
+      visibility: visible;
+      padding: 50px 80px 30px 80px;
+      display: flex;
+      flex-direction: column;
+      background: var(--color-bg-light);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+      overflow: hidden;
+    }
+    .slide-header { flex: 0 0 auto; }
+    .slide-footer { flex: 0 0 auto; margin-top: auto; }
+    .slide-body { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+
+    /* ==============================================================================
+       4. 官方标头与水印 (Official Header)
+       ============================================================================== */
+    .slide-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 25px;
+      position: relative;
+    }
+    .slide-title-area { display: flex; flex-direction: column; }
+    h1.slide-title {
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--color-primary);
+      line-height: 1.2;
+      margin-bottom: 4px;
+      letter-spacing: 0.02em;
+    }
+    .slide-category { font-size: 16px; color: var(--color-text-secondary); font-weight: 400; }
+    .title-divider {
+      position: absolute;
+      bottom: -10px;
+      left: 0;
+      width: 400px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary) 40%, var(--color-border) 40%, var(--color-border) 100%);
+    }
+    .header-right { display: flex; align-items: center; gap: 15px; }
+    .confidential-box {
+      border: 1px solid var(--color-primary);
+      color: var(--color-primary);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 3px;
+      letter-spacing: 0.05em;
+    }
+    .logo-container { display: flex; align-items: center; gap: 10px; }
+
+    /* ==============================================================================
+       5. 版式布局组件 (Layouts)
+       ============================================================================== */
+    .section-banner {
+      background: var(--color-primary);
+      color: var(--color-text-light);
+      font-size: 22px;
+      font-weight: 700;
+      padding: 10px 24px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      text-align: left;
+      letter-spacing: 0.05em;
+      flex: 0 0 auto;
+    }
+
+    .gray-card {
+      background: var(--color-card-bg);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      padding: 30px;
+      height: 100%;
+    }
+
+    .grid-2-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      flex-grow: 1;
+      align-items: stretch;
+      margin-bottom: 20px;
+    }
+
+    .grid-3-col {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      flex-grow: 1;
+      margin-bottom: 20px;
+    }
+
+    .grid-4-col {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      flex-grow: 1;
+      margin-bottom: 20px;
+    }
+
+    .bullet-list { list-style: none; }
+    .bullet-list li {
+      position: relative;
+      padding-left: 24px;
+      margin-bottom: 18px;
+      font-size: 18px;
+      line-height: 1.5;
+      color: var(--color-text-primary);
+    }
+    .bullet-list li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 9px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--color-primary);
+    }
+    .bullet-list li .l5-desc {
+      display: block;
+      font-size: 15px;
+      color: var(--color-text-secondary);
+      margin-top: 4px;
+    }
+
+    /* 痛点卡片 */
+    .pain-point-card {
+      background: var(--color-card-bg);
+      border: 1px solid var(--color-border);
+      border-left: 4px solid var(--color-primary);
+      border-radius: 8px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .pain-point-card .pp-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: var(--color-primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+    .pain-point-card h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--color-text-primary);
+    }
+    .pain-point-card .pp-cause {
+      font-size: 14px;
+      color: var(--color-text-secondary);
+      line-height: 1.5;
+    }
+    .pain-point-card .pp-tag {
+      display: inline-block;
+      font-size: 12px;
+      color: var(--color-primary);
+      background: var(--color-primary-light);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+      width: fit-content;
+    }
+
+    /* HDR格式对比卡片 */
+    .hdr-card {
+      background: var(--color-bg-light);
+      border: 2px solid var(--color-border);
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: border-color 0.3s;
+    }
+    .hdr-card.highlight { border-color: var(--color-primary); }
+    .hdr-card .hdr-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .hdr-card .hdr-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--color-text-primary);
+    }
+    .hdr-card .hdr-badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .hdr-card .hdr-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .hdr-card .hdr-row:last-child { border-bottom: none; }
+    .hdr-card .hdr-label { color: var(--color-text-tertiary); }
+    .hdr-card .hdr-value { color: var(--color-text-primary); font-weight: 500; }
+
+    /* 算法流程管线 */
+    .pipeline-container {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      flex-grow: 1;
+      margin-bottom: 20px;
+    }
+    .pipeline-stage {
+      flex: 1;
+      background: var(--color-card-bg);
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+      margin-right: 24px;
+    }
+    .pipeline-stage:last-child { margin-right: 0; }
+    .pipeline-stage::after {
+      content: "";
+      position: absolute;
+      right: -18px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 12px;
+      height: 12px;
+      border-top: 2px solid var(--color-primary);
+      border-right: 2px solid var(--color-primary);
+      transform: translateY(-50%) rotate(45deg);
+      z-index: 2;
+    }
+    .pipeline-stage:last-child::after { display: none; }
+    .pipeline-stage .ps-num {
+      font-size: 12px;
+      color: var(--color-primary);
+      font-weight: 700;
+      letter-spacing: 0.1em;
+    }
+    .pipeline-stage h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--color-text-primary);
+    }
+    .pipeline-stage .ps-desc {
+      font-size: 13px;
+      color: var(--color-text-secondary);
+      line-height: 1.5;
+    }
+    .pipeline-stage .ps-kpi {
+      margin-top: auto;
+      font-size: 12px;
+      color: var(--color-accent-blue);
+      background: #EFF6FF;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+      width: fit-content;
+    }
+
+    /* 校准流程步骤 */
+    .calib-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+    .calib-step-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--color-primary);
+      color: #FFFFFF;
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .calib-step-content h4 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--color-text-primary);
+      margin-bottom: 4px;
+    }
+    .calib-step-content p {
+      font-size: 13px;
+      color: var(--color-text-secondary);
+      line-height: 1.5;
+    }
+
+    /* 对比表格 */
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #FFFFFF;
+      font-size: 16px;
+      border: 1px solid var(--color-border);
+      text-align: center;
+    }
+    .comparison-table thead tr {
+      background: var(--color-primary);
+      color: #FFFFFF;
+    }
+    .comparison-table thead th {
+      padding: 14px 16px;
+      border: 1px solid var(--color-primary);
+      font-weight: 700;
+      font-size: 15px;
+    }
+    .comparison-table tbody td {
+      padding: 12px 16px;
+      border: 1px solid var(--color-border);
+      font-size: 14px;
+    }
+    .comparison-table tbody tr:nth-child(even) { background: var(--color-card-bg); }
+    .comparison-table .col-highlight { background: var(--color-primary-light); font-weight: 600; }
+
+    /* 机会矩阵 */
+    .opportunity-card {
+      background: var(--color-card-bg);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .opportunity-card .oc-priority {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 4px;
+      width: fit-content;
+    }
+    .opportunity-card .oc-priority.p1 { background: var(--color-primary); color: #FFFFFF; }
+    .opportunity-card .oc-priority.p2 { background: var(--color-accent-amber); color: #FFFFFF; }
+    .opportunity-card .oc-priority.p3 { background: var(--color-accent-blue); color: #FFFFFF; }
+    .opportunity-card h3 { font-size: 18px; font-weight: 700; color: var(--color-text-primary); }
+    .opportunity-card p { font-size: 14px; color: var(--color-text-secondary); line-height: 1.5; }
+
+    /* 趋势指标卡 */
+    .trend-card {
+      background: var(--color-card-bg);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .trend-card .tc-label { font-size: 14px; color: var(--color-text-tertiary); }
+    .trend-card .tc-value { font-size: 32px; font-weight: 700; color: var(--color-primary); }
+    .trend-card .tc-unit { font-size: 16px; color: var(--color-text-secondary); font-weight: 400; }
+    .trend-card .tc-desc { font-size: 13px; color: var(--color-text-secondary); line-height: 1.5; margin-top: 4px; }
+    .trend-card .tc-tag {
+      display: inline-block;
+      font-size: 11px;
+      color: var(--color-accent-green);
+      background: #ECFDF5;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      width: fit-content;
+    }
+
+    /* ==============================================================================
+       6. 封面与封底 (Cover & Thank You)
+       ============================================================================== */
+    .cover-slide {
+      padding: 0 !important;
+      background: var(--color-bg-light);
+      position: relative;
+      display: flex;
+      flex-direction: row !important;
+      overflow: hidden;
+    }
+    .cover-left {
+      width: 65%;
+      height: 100%;
+      background: var(--color-primary);
+      color: var(--color-text-light);
+      padding: 100px 80px 100px 100px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      z-index: 5;
+    }
+    .cover-curve {
+      position: absolute;
+      top: 0;
+      left: 65%;
+      width: 15%;
+      height: 100%;
+      z-index: 4;
+    }
+    .cover-right {
+      width: 35%;
+      height: 100%;
+      background: #E5E7EB;
+      position: relative;
+      z-index: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    /* ==============================================================================
+       7. 页脚 (Footer)
+       ============================================================================== */
+    .slide-footer {
+      border-top: 1px solid var(--color-border);
+      height: 50px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--color-text-secondary);
+      margin-top: 10px;
+    }
+    #progress-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 4px;
+      background: var(--color-primary);
+      width: 0%;
+      transition: width 0.3s ease-out;
+      z-index: 10;
+    }
+
+    /* 待验证标签 */
+    .verify-tag {
+      display: inline-block;
+      font-size: 11px;
+      color: var(--color-accent-amber);
+      background: #FFFBEB;
+      border: 1px solid #FDE68A;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-weight: 500;
+      margin-left: 4px;
+    }
+  
+
+    /* 品牌色变量 */
+    :root {
+      --color-brand-tcl: #E60012;
+      --color-brand-hisense: #0066CC;
+      --color-brand-sony: #1A1A1A;
+      --color-brand-lg: #A50034;
+    }
+    .brand-card { background: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 14px; }
+    .brand-card .bc-header { display: flex; align-items: center; gap: 12px; padding-bottom: 12px; border-bottom: 2px solid var(--color-border); }
+    .brand-card .bc-logo { width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-size: 20px; font-weight: 700; }
+    .brand-card .bc-name { font-size: 20px; font-weight: 700; color: var(--color-text-primary); }
+    .brand-card .bc-subtitle { font-size: 13px; color: var(--color-text-tertiary); }
+    .brand-card .bc-section-title { font-size: 14px; font-weight: 700; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+    .brand-card .bc-feature-list { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+    .brand-card .bc-feature-list li { font-size: 14px; color: var(--color-text-primary); padding-left: 18px; position: relative; line-height: 1.4; }
+    .brand-card .bc-feature-list li::before { content: "\25b8"; position: absolute; left: 0; color: var(--color-primary); font-size: 12px; }
+    .brand-card .bc-score { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+    .brand-card .bc-score-tag { font-size: 12px; padding: 3px 10px; border-radius: 4px; font-weight: 600; }
+    .menu-tree-container { background: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: 12px; padding: 24px 30px; flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+    .menu-tree-container h3 { font-size: 16px; font-weight: 700; color: var(--color-text-secondary); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .menu-tree { flex: 1 1 auto; display: flex; flex-direction: column; gap: 5px; overflow: hidden; }
+    .tree-node { display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 1.3; }
+    .tree-node .tn-icon { width: 18px; text-align: center; flex-shrink: 0; font-size: 12px; }
+    .tree-node .tn-box { background: #FFFFFF; border: 1px solid var(--color-border); border-radius: 4px; padding: 4px 10px; font-size: 13px; white-space: nowrap; }
+    .tree-node.root .tn-box { background: var(--color-primary); color: #FFFFFF; font-weight: 700; border-color: var(--color-primary); }
+    .tree-node.l1 .tn-box { font-weight: 600; border-left: 3px solid var(--color-primary); }
+    .tree-node.l2 .tn-box { background: var(--color-card-bg-alt); border-left: 3px solid var(--color-border-dark); }
+    .tree-node.l3 .tn-box { font-size: 12px; color: var(--color-text-secondary); border-left: 2px solid var(--color-border); }
+    .comparison-table .cell-yes { color: var(--color-accent-green); font-weight: 600; }
+    .comparison-table .cell-no { color: #999; }
+    .comparison-table .cell-partial { color: var(--color-accent-amber); font-weight: 500; }
+    .comparison-table .col-label { text-align: left; font-weight: 600; background: var(--color-card-bg-alt); }
+    .swot-grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 16px; flex: 1 1 auto; min-height: 0; }
+    .swot-quadrant { border-radius: 12px; padding: 20px 24px; display: flex; flex-direction: column; gap: 8px; }
+    .swot-quadrant.s { background: #ECFDF5; border: 2px solid var(--color-accent-green); }
+    .swot-quadrant.w { background: #FEF2F2; border: 2px solid var(--color-primary); }
+    .swot-quadrant.o { background: #EFF6FF; border: 2px solid var(--color-accent-blue); }
+    .swot-quadrant.t { background: #FFFBEB; border: 2px solid var(--color-accent-amber); }
+    .swot-quadrant .sq-label { font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+    .swot-quadrant.s .sq-label { color: var(--color-accent-green); }
+    .swot-quadrant.w .sq-label { color: var(--color-primary); }
+    .swot-quadrant.o .sq-label { color: var(--color-accent-blue); }
+    .swot-quadrant.t .sq-label { color: var(--color-accent-amber); }
+    .swot-quadrant ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+    .swot-quadrant ul li { font-size: 14px; color: var(--color-text-primary); padding-left: 16px; position: relative; line-height: 1.4; }
+    .swot-quadrant ul li::before { content: "\2022"; position: absolute; left: 0; font-weight: 700; }
+    .dimension-card { background: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: 10px; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+    .dimension-card .dc-num { font-size: 28px; font-weight: 700; color: var(--color-primary); line-height: 1; }
+    .dimension-card .dc-title { font-size: 16px; font-weight: 700; color: var(--color-text-primary); }
+    .dimension-card .dc-desc { font-size: 13px; color: var(--color-text-secondary); line-height: 1.5; }
+    .dimension-card .dc-weights { display: flex; gap: 6px; margin-top: auto; }
+    .dimension-card .dc-weight { font-size: 11px; padding: 2px 8px; border-radius: 3px; background: var(--color-primary-light); color: var(--color-primary); font-weight: 600; }
+    .strategy-card { background: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+    .strategy-card .sc-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 4px; width: fit-content; }
+    .strategy-card .sc-tag.defend { background: var(--color-accent-blue); color: #FFFFFF; }
+    .strategy-card .sc-tag.attack { background: var(--color-primary); color: #FFFFFF; }
+    .strategy-card h3 { font-size: 18px; font-weight: 700; color: var(--color-text-primary); }
+    .strategy-card .sc-items { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+    .strategy-card .sc-items li { font-size: 14px; color: var(--color-text-primary); padding-left: 18px; position: relative; line-height: 1.5; }
+    .strategy-card .sc-items li::before { content: "\2192"; position: absolute; left: 0; color: var(--color-primary); font-weight: 700; }
+    .brand-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+    .score-summary-card { background: var(--color-card-bg); border: 1px solid var(--color-border); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 8px; }
+    .score-summary-card .ssc-brand { font-size: 15px; font-weight: 700; color: var(--color-text-primary); }
+    .score-summary-card .ssc-bar-bg { height: 8px; background: var(--color-border); border-radius: 4px; overflow: hidden; }
+    .score-summary-card .ssc-bar-fill { height: 100%; border-radius: 4px; }
+    .score-summary-card .ssc-score { font-size: 13px; color: var(--color-text-secondary); }
+
+  </style>
+</head>
+<body>
+  <div id="deck-container">
+    <div id="deck">
+      <!-- 第 1 页: 封面页 -->
+      <div class="slide cover-slide active">
+        <div class="cover-left animate-fade-up">
+          <div class="logo-container">
+            <svg width="100" height="24" viewBox="0 0 162 38" fill="#FFFFFF"><path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/></svg>
+            <div style="width: 1px; height: 20px; background: rgba(255,255,255,0.4); margin: 0 10px;"></div>
+            <svg width="65" height="24" viewBox="0 0 120 50"><circle cx="20" cy="20" r="11" stroke="#FFFFFF" fill="none" stroke-width="2.5"/><circle cx="48" cy="20" r="11" stroke="#FFFFFF" fill="none" stroke-width="2.5"/><circle cx="76" cy="20" r="11" stroke="#FFFFFF" fill="none" stroke-width="2.5"/><circle cx="34" cy="31" r="11" stroke="#FFFFFF" fill="none" stroke-width="2.5"/><circle cx="62" cy="31" r="11" stroke="#FFFFFF" fill="none" stroke-width="2.5"/></svg>
+            <div style="font-size: 11px; font-weight: 400; opacity: 0.8; letter-spacing: 0.1em; margin-left: 5px;">奥林匹克全球合作伙伴</div>
+          </div>
+          <div>
+            <h1 style="font-size: 52px; font-weight: 700; margin-bottom: 20px; line-height: 1.15; letter-spacing: 0.02em;">画质设置菜单<br>竞品分析报告</h1>
+            <div style="font-size: 20px; font-weight: 400; opacity: 0.9; border-left: 4px solid #FFFFFF; padding-left: 15px; line-height: 1.5;">TCL / 海信 / 索尼 / LG — 四大厂商画质菜单交互与功能横向对比</div>
+          </div>
+          <div style="font-size: 16px; opacity: 0.8; display: flex; gap: 40px;">
+            <div>发表团队: <b>产品规划部</b></div>
+            <div>日期: <b>2026年7月12日</b></div>
+            <div>版本: <b>V1.0.0</b></div>
+          </div>
+        </div>
+        <svg class="cover-curve" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M0,0 L100,0 C65,30 35,70 0,100 Z" fill="#E60012"/></svg>
+        <div class="cover-right">
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; padding: 40px;">
+            <svg width="320" height="220" viewBox="0 0 320 220">
+              <rect x="10" y="10" width="300" height="200" rx="10" fill="#1A1A2E"/>
+              <rect x="30" y="30" width="260" height="150" rx="6" fill="#0D0D1A"/>
+              <rect x="50" y="50" width="100" height="28" rx="4" fill="#E60012" opacity="0.9"/>
+              <text x="100" y="69" text-anchor="middle" fill="#FFF" font-size="11" font-weight="700">画质</text>
+              <rect x="160" y="50" width="120" height="28" rx="4" fill="#1A1A2E" stroke="#E60012" stroke-width="1"/>
+              <text x="220" y="69" text-anchor="middle" fill="#999" font-size="10">声音</text>
+              <rect x="50" y="90" width="230" height="24" rx="4" fill="#E60012" opacity="0.15"/>
+              <text x="65" y="107" fill="#E60012" font-size="10" font-weight="600">图像模式</text>
+              <text x="265" y="107" text-anchor="end" fill="#E60012" font-size="10">标准 ▸</text>
+              <rect x="50" y="122" width="230" height="24" rx="4" fill="#1A1A2E"/>
+              <text x="65" y="139" fill="#CCC" font-size="10">亮度</text>
+              <rect x="180" y="128" width="90" height="12" rx="6" fill="#333"/>
+              <rect x="180" y="128" width="55" height="12" rx="6" fill="#E60012"/>
+              <rect x="50" y="154" width="230" height="24" rx="4" fill="#1A1A2E"/>
+              <text x="65" y="171" fill="#CCC" font-size="10">对比度</text>
+              <rect x="180" y="160" width="90" height="12" rx="6" fill="#333"/>
+              <rect x="180" y="160" width="60" height="12" rx="6" fill="#E60012"/>
+              <text x="160" y="200" text-anchor="middle" fill="#666" font-size="9" font-family="monospace">Picture Quality Settings UI</text>
+            </svg>
+            <div style="font-size: 16px; font-weight: bold; color: #64748B;">画质菜单示意</div>
+            <div style="font-size: 12px; color: #94A3B8;">[ ProductPilot 竞品研究 ]</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 第 2 页: 分析框架与方法论 -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area"><h1 class="slide-title">分析框架与方法论</h1><span class="slide-category">研究方法</span></div>
+          <div class="title-divider"></div>
+          <div class="header-right">
+            <div class="confidential-box">机密材料，请勿外传</div>
+            <div class="logo-container"><svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012"><path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/></svg></div>
+          </div>
+        </div>
+        <div class="section-banner">核心结论：从菜单结构、功能完整度、交互易用性、专业校准四大维度，对四家厂商画质菜单进行横向评测</div>
+        <div class="grid-4-col animate-fade-up" >
+          <div class="dimension-card"><div class="dc-num">01</div><div class="dc-title">菜单结构与层级</div><div class="dc-desc">分析画质菜单的入口路径、层级深度、分类逻辑与信息架构合理性</div><div class="dc-weights"><span class="dc-weight">权重 25%</span></div></div>
+          <div class="dimension-card"><div class="dc-num">02</div><div class="dc-title">功能完整度</div><div class="dc-desc">评估 HDR 设置、背光控制、色彩管理、运动补偿等核心画质功能覆盖范围</div><div class="dc-weights"><span class="dc-weight">权重 30%</span></div></div>
+          <div class="dimension-card"><div class="dc-num">03</div><div class="dc-title">交互易用性</div><div class="dc-desc">评测十英尺交互下的焦点导航效率、操作步数、参数引导与实时预览体验</div><div class="dc-weights"><span class="dc-weight">权重 25%</span></div></div>
+          <div class="dimension-card"><div class="dc-num">04</div><div class="dc-title">专业校准能力</div><div class="dc-desc">对比白平衡、色彩管理系统（CMS）、Gamma 调节等专业模式的深度与精度</div><div class="dc-weights"><span class="dc-weight">权重 20%</span></div></div>
+        </div>
+        <div class="grid-2-col animate-fade-up" style=" margin-bottom: 0;">
+          <div class="gray-card" style="padding: 20px 24px;">
+            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--color-text-primary);">分析对象</h3>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 15px;"><span class="brand-dot" style="background: var(--color-brand-tcl);"></span><b>TCL</b> — Google TV / TV+ 系统，2025 旗舰机型<span class="verify-tag">待验证</span></div>
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 15px;"><span class="brand-dot" style="background: var(--color-brand-hisense);"></span><b>海信（Hisense）</b> — VIDAA 系统，2025 ULED X 系列<span class="verify-tag">待验证</span></div>
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 15px;"><span class="brand-dot" style="background: var(--color-brand-sony);"></span><b>索尼（Sony）</b> — Google TV 系统，2025 BRAVIA 系列<span class="verify-tag">待验证</span></div>
+              <div style="display: flex; align-items: center; gap: 10px; font-size: 15px;"><span class="brand-dot" style="background: var(--color-brand-lg);"></span><b>LG</b> — webOS 系统，2025 OLED evo 系列<span class="verify-tag">待验证</span></div>
+            </div>
+          </div>
+          <div class="gray-card" style="padding: 20px 24px;">
+            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--color-text-primary);">数据来源与限制</h3>
+            <ul class="bullet-list" style="font-size: 14px;">
+              <li>各品牌官方用户手册与在线支持文档<span class="l5-desc">截至 2025 年公开版本</span></li>
+              <li>专业评测媒体公开截图与实测<span class="l5-desc">RTINGS、HDTVTest 等</span></li>
+              <li>线下卖场实机操作体验<span class="l5-desc">部分机型可能因固件版本差异有所不同</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="slide-footer"><div>ProductPilot 竞品分析 | 数据来源：各品牌官方文档与公开评测（部分待验证）</div><div>02 / 18</div></div>
+      </div>
+
+      <!-- 第 3 页: 评测维度评分标准 -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area"><h1 class="slide-title">评测维度评分标准</h1><span class="slide-category">研究方法</span></div>
+          <div class="title-divider"></div>
+          <div class="header-right">
+            <div class="confidential-box">机密材料，请勿外传</div>
+            <div class="logo-container"><svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012"><path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/></svg></div>
+          </div>
+        </div>
+        <div class="section-banner">评分采用 5 级制：5=卓越 / 4=优秀 / 3=合格 / 2=不足 / 1=缺失，每个维度细分为 3-4 项子指标</div>
+        <div class="animate-fade-up" style=" overflow: hidden; margin-bottom: 20px;">
+          <table class="comparison-table">
+            <thead><tr><th style="width: 16%;">评测维度</th><th style="width: 20%;">子指标</th><th style="width: 44%;">评分标准</th><th style="width: 10%;">5 分标准</th><th style="width: 10%;">权重</th></tr></thead>
+            <tbody>
+              <tr><td class="col-label" rowspan="3" style="vertical-align: middle;">菜单结构</td><td>入口深度</td><td style="text-align: left;">从主页到画质核心设置的遥控器点击次数</td><td>≤ 2 步</td><td>8%</td></tr>
+              <tr><td>层级分类</td><td style="text-align: left;">基础/进阶/专业的分层逻辑是否清晰</td><td>三层分明</td><td>10%</td></tr>
+              <tr><td>信息架构</td><td style="text-align: left;">功能项分组是否合理、是否可搜索</td><td>分类+搜索</td><td>7%</td></tr>
+              <tr><td class="col-label" rowspan="3" style="vertical-align: middle;">功能完整度</td><td>核心画质项</td><td style="text-align: left;">亮度/对比度/色彩/清晰度/背光等基础项覆盖</td><td>全部覆盖</td><td>10%</td></tr>
+              <tr><td>HDR 与动态元数据</td><td style="text-align: left;">HDR10/HDR10+/Dolby Vision/HLG 格式开关与映射</td><td>全格式+映射</td><td>10%</td></tr>
+              <tr><td>专业校准项</td><td style="text-align: left;">白平衡/CMS/Gamma/色域空间切换</td><td>全项可调</td><td>10%</td></tr>
+              <tr><td class="col-label" rowspan="3" style="vertical-align: middle;">交互易用性</td><td>焦点导航效率</td><td style="text-align: left;">十字键寻路是否直角可达、无焦点死胡同</td><td>零死角</td><td>10%</td></tr>
+              <tr><td>参数引导与预览</td><td style="text-align: left;">调节时是否实时预览、是否有说明文字</td><td>实时+引导</td><td>8%</td></tr>
+              <tr><td>场景预设</td><td style="text-align: left;">电影/游戏/体育等预设模式丰富度与自动切换</td><td>≥6 模式</td><td>7%</td></tr>
+              <tr><td class="col-label" rowspan="2" style="vertical-align: middle;">专业校准</td><td>校准接口</td><td style="text-align: left;">是否支持 Calman AutoCal / U 盘校准文件导入</td><td>双通道</td><td>10%</td></tr>
+              <tr><td>调节精度</td><td style="text-align: left;">白平衡/色域的调节点数与步进精度</td><td>10/20 点</td><td>10%</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="slide-footer"><div>ProductPilot 竞品分析 | 评分标准基于十英尺交互与画质专业评测实践</div><div>03 / 18</div></div>
+      </div>
+
+      <!-- 第 4 页: TCL 画质设置菜单概览 -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area"><h1 class="slide-title">TCL 画质设置菜单概览</h1><span class="slide-category">竞品分析 · TCL</span></div>
+          <div class="title-divider"></div>
+          <div class="header-right"><div class="confidential-box">机密材料，请勿外传</div><div class="logo-container"><svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012"><path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/></svg></div></div>
+        </div>
+        <div class="section-banner">核心结论：TCL 采用 Google TV 标准三层架构，Game Master 独立面板是差异化亮点，但专业校准深度待提升</div>
+        <div class="grid-2-col animate-fade-up" style=" margin-bottom: 0;">
+          <div class="brand-card" style="border-left: 4px solid var(--color-brand-tcl);">
+            <div class="bc-header"><div class="bc-logo" style="background: var(--color-brand-tcl);">T</div><div><div class="bc-name">TCL</div><div class="bc-subtitle">Google TV 系统 · 2025 旗舰机型<span class="verify-tag">待验证</span></div></div></div>
+            <div><div class="bc-section-title">菜单入口路径</div><div style="font-size: 15px; margin-top: 4px;">设置 → 图像 → 图像模式 / 高级设置</div><div style="font-size: 13px; color: var(--color-text-tertiary); margin-top: 2px;">遥控器快捷键：画面（Picture）键直达</div></div>
+            <div><div class="bc-section-title">预设模式</div><div class="bc-feature-list" style="margin-top: 4px;"><li>标准 / 影院 / 运动 / 游戏 / PC / 鲜艳</li><li>AI 自适应模式（内容类型自动识别）<span class="verify-tag">待验证</span></li></div></div>
+            <div><div class="bc-section-title">核心功能项</div><div class="bc-feature-list" style="margin-top: 4px;"><li>亮度 / 对比度 / 黑电平 / 色彩 / 色调 / 锐度</li><li>动态对比度 / 黑色拉伸 / 局部调光（Local Dimming）</li><li>MEMC 运动补偿 / 电影模式 / 降噪</li><li>HDR 模式 / HDR 色调映射 / Dolby Vision</li><li>色温 / 白平衡（2 点/10 点）/ 色彩管理系统</li></div></div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="brand-card" style="border-left: 4px solid var(--color-accent-green);  ">
+              <div class="bc-section-title" style="color: var(--color-accent-green);">差异化亮点</div>
+              <div class="bc-feature-list" style="margin-top: 8px;">
+                <li><b>Game Master 独立面板</b>：游戏场景一键开启 VRR/ALLM/120Hz，无需进入深层菜单</li>
+                <li><b>画质快捷键</b>：遥控器专属 Picture 按键直达画质菜单</li>
+                <li><b>AI 画质引擎</b>：基于内容类型自动切换画质参数<span class="verify-tag">待验证</span></li>
+              </div>
+              <div class="bc-score"><span class="bc-score-tag" style="background: #ECFDF5; color: var(--color-accent-green);">游戏体验突出</span><span class="bc-score-tag" style="background: #EFF6FF; color: var(--color-accent-blue);">入口快捷</span></div>
+            </div>
+            <div class="brand-card" style="border-left: 4px solid var(--color-primary);  ">
+              <div class="bc-section-title" style="color: var(--color-primary);">待改进项</div>
+              <div class="bc-feature-list" style="margin-top: 8px;">
+                <li>专业校准项入口较深，白平衡/CMS 藏在高级设置三层以下</li>
+                <li>缺少参数说明引导，普通用户难以理解 Gamma/色温含义</li>
+                <li>不支持 Calman AutoCal 自动校准协议<span class="verify-tag">待验证</span></li>
+              </div>
+              <div class="bc-score"><span class="bc-score-tag" style="background: var(--color-primary-light); color: var(--color-primary);">专业深度不足</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer"><div>ProductPilot 竞品分析 | TCL 画质菜单 | 数据来源：官方文档与公开评测（部分待验证）</div><div>04 / 18</div></div>
+      </div>
+
+      <!-- 第 5 页: TCL 菜单层级树 -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area"><h1 class="slide-title">TCL 画质菜单层级树</h1><span class="slide-category">竞品分析 · TCL</span></div>
+          <div class="title-divider"></div>
+          <div class="header-right"><div class="confidential-box">机密材料，请勿外传</div><div class="logo-container"><svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012"><path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/></svg></div></div>
+        </div>
+        <div class="section-banner">层级深度 3 级：图像模式（L1）→ 基础调节（L2）→ 高级/专业（L3），Game Master 为独立侧栏入口</div>
+        <div class="grid-2-col animate-fade-up" style=" margin-bottom: 0;">
+          <div class="menu-tree-container">
+            <h3>设置 → 图像（主路径）</h3>
+            <div class="menu-tree">
+              <div class="tree-node root"><span class="tn-icon">▸</span><span class="tn-box">设置</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">图像模式</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│</span><span class="tn-box">标准 / 影院 / 运动 / 游戏 / PC / 鲜艳</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">亮度</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│</span><span class="tn-box">亮度 / 对比度 / 黑电平 / 动态对比度</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│</span><span class="tn-box">黑色拉伸 / 局部调光（Local Dimming）</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">色彩</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│</span><span class="tn-box">色彩饱和度 / 色调 / 动态色彩</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">清晰度</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│</span><span class="tn-box">锐度 / 降噪 / MPEG 降噪</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">运动</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│</span><span class="tn-box">MEMC 运动补偿 / 电影模式</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">高级设置 ▾</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">HDR 模式 / HDR 色调映射</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">Dolby Vision 模式</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">色温（冷/标准/暖/自定义）</span></div>
+              <div class="tree-node l3"><span class="tn-icon">││└</span><span class="tn-box">白平衡：2 点 / 10 点调节</span></div>
+              <div class="tree-node l3"><span class="tn-icon">││└</span><span class="tn-box">色彩管理系统（CMS）</span></div>
+              <div class="tree-node l3"><span class="tn-icon">││└</span><span class="tn-box">Gamma 调节</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│└</span><span class="tn-box">色彩空间（自动/Rec.709/BT.2020）</span></div>
+              <div class="tree-node l1"><span class="tn-icon">└</span><span class="tn-box">图像重置</span></div>
+            </div>
+          </div>
+          <div class="menu-tree-container" style="background: #FFF5F5; border-color: var(--color-brand-tcl);">
+            <h3 style="color: var(--color-brand-tcl);">Game Master（独立面板）</h3>
+            <div class="menu-tree">
+              <div class="tree-node root"><span class="tn-icon">▸</span><span class="tn-box" style="background: var(--color-brand-tcl);">Game Master Dashboard</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">游戏模式开关</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">VRR 可变刷新率</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">ALLM 自动低延迟</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">120Hz 游戏模式</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">游戏暗场增强</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">FreeSync Premium Pro</span></div>
+              <div class="tree-node l1"><span class="tn-icon">└</span><span class="tn-box">游戏准星 / 辅助线</span></div>
+            </div>
+            <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid var(--color-border); font-size: 13px; color: var(--color-text-secondary); line-height: 1.5;"><b style="color: var(--color-brand-tcl);">优势：</b>游戏画质参数集中管理，一键开启全部游戏优化，无需逐项查找<br><b style="color: var(--color-primary);">不足：</b>非游戏场景的专业校准入口仍较深，从主页到达 CMS 需 4 步操作</div>
+          </div>
+        </div>
+        <div class="slide-footer"><div>ProductPilot 竞品分析 | TCL 菜单层级树 | 基于公开文档整理（部分待验证）</div><div>05 / 18</div></div>
+      </div>
+
+      <!-- 第 6 页: 海信画质设置菜单概览 -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area"><h1 class="slide-title">海信画质设置菜单概览</h1><span class="slide-category">竞品分析 · 海信</span></div>
+          <div class="title-divider"></div>
+          <div class="header-right"><div class="confidential-box">机密材料，请勿外传</div><div class="logo-container"><svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012"><path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/></svg></div></div>
+        </div>
+        <div class="section-banner">核心结论：海信 VIDAA 系统以 AI 画质为核心卖点，菜单铺平但专业校准项较基础</div>
+        <div class="grid-2-col animate-fade-up" style=" margin-bottom: 0;">
+          <div class="brand-card" style="border-left: 4px solid var(--color-brand-hisense);">
+            <div class="bc-header"><div class="bc-logo" style="background: var(--color-brand-hisense);">H</div><div><div class="bc-name">海信（Hisense）</div><div class="bc-subtitle">VIDAA 系统 · ULED X 系列<span class="verify-tag">待验证</span></div></div></div>
+            <div><div class="bc-section-title">菜单入口路径</div><div style="font-size: 15px; margin-top: 4px;">设置 → 图像 → 图像模式 / 高级图像</div><div style="font-size: 13px; color: var(--color-text-tertiary); margin-top: 2px;">遥控器快捷键：菜单键 → 图像</div></div>
+            <div><div class="bc-section-title">预设模式</div><div class="bc-feature-list" style="margin-top: 4px;"><li>标准 / 影院 / 运动 / 游戏 / 节能 / 鲜艳</li><li>AI 自适应模式（场景智能识别）<span class="verify-tag">待验证</span></li><li>电影制作人模式（Filmmaker Mode）</li></div></div>
+            <div><div class="bc-section-title">核心功能项</div><div class="bc-feature-list" style="margin-top: 4px;"><li>亮度 / 对比度 / 色彩 / 色调 / 锐度</li><li>动态对比度 / 局部调光（ULED 分区控制）</li><li>AI 画质增强 / AI 色彩 / AI 清晰度</li><li>MEMC 运动补偿 / 数字降噪</li><li>HDR 模式 / HDR10+ / Dolby Vision</li><li>色温 / 白平衡 / 色彩管理</li></div></div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="brand-card" style="border-left: 4px solid var(--color-accent-green);  ">
+              <div class="bc-section-title" style="color: var(--color-accent-green);">差异化亮点</div>
+              <div class="bc-feature-list" style="margin-top: 8px;">
+                <li><b>AI 画质引擎</b>：AI 场景识别自动切换画质参数，含 12 种场景<span class="verify-tag">待验证</span></li>
+                <li><b>ULED 分区控制</b>：背光分区可视化调节界面，分区数实时显示</li>
+                <li><b>Filmmaker Mode</b>：一键还原导演意图，关闭所有画质增强</li>
+              </div>
+              <div class="bc-score"><span class="bc-score-tag" style="background: #ECFDF5; color: var(--color-accent-green);">AI 功能丰富</span><span class="bc-score-tag" style="background: #FFFBEB; color: var(--color-accent-amber);">分区可视化</span></div>
+            </div>
+            <div class="brand-card" style="border-left: 4px solid var(--color-primary);  ">
+              <div class="bc-section-title" style="color: var(--color-primary);">待改进项</div>
+              <div class="bc-feature-list" style="margin-top: 8px;">
+                <li>白平衡仅 2 点调节，缺少 10/20 点高精度校准<span class="verify-tag">待验证</span></li>
+                <li>CMS 色彩管理仅提供 RGB 三色滑块，精度有限</li>
+                <li>AI 画质增强项较多但缺少参数说明，用户难以判断效果差异</li>
+              </div>
+              <div class="bc-score"><span class="bc-score-tag" style="background: var(--color-primary-light); color: var(--color-primary);">校准深度不足</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer"><div>ProductPilot 竞品分析 | 海信画质菜单 | 数据来源：官方文档与公开评测（部分待验证）</div><div>06 / 18</div></div>
+      </div>
+
+      <!-- 第 7 页: 海信菜单层级树 -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area"><h1 class="slide-title">海信画质菜单层级树</h1><span class="slide-category">竞品分析 · 海信</span></div>
+          <div class="title-divider"></div>
+          <div class="header-right"><div class="confidential-box">机密材料，请勿外传</div><div class="logo-container"><svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012"><path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/></svg></div></div>
+        </div>
+        <div class="section-banner">层级深度 3 级：图像模式（L1）→ 基础调节（L2）→ 高级图像/专业设置（L3），AI 画质项贯穿各层</div>
+        <div class="grid-2-col animate-fade-up" style=" margin-bottom: 0;">
+          <div class="menu-tree-container">
+            <h3>设置 → 图像（主路径）</h3>
+            <div class="menu-tree">
+              <div class="tree-node root"><span class="tn-icon">▸</span><span class="tn-box">设置</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">图像模式</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│</span><span class="tn-box">标准 / 影院 / 运动 / 游戏 / 节能 / 鲜艳</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│</span><span class="tn-box">Filmmaker Mode / AI 自适应</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">AI 画质</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">AI 画质增强（开关）</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">AI 色彩 / AI 清晰度 / AI 运动补偿</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│└</span><span class="tn-box">AI 场景识别（自动模式切换）</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">亮度与对比度</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">亮度 / 对比度 / 黑电平</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│└</span><span class="tn-box">局部调光（ULED 分区控制）</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">色彩</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">色彩饱和度 / 色调 / 动态色彩</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">高级图像 ▾</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">HDR 模式 / HDR10+ / Dolby Vision</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">色温（冷/标准/暖/自定义）</span></div>
+              <div class="tree-node l3"><span class="tn-icon">││└</span><span class="tn-box">白平衡：2 点调节</span></div>
+              <div class="tree-node l3"><span class="tn-icon">││└</span><span class="tn-box">色彩管理（RGB 滑块）</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">MEMC 运动补偿 / 数字降噪</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│└</span><span class="tn-box">Gamma 调节</span></div>
+              <div class="tree-node l1"><span class="tn-icon">└</span><span class="tn-box">图像重置</span></div>
+            </div>
+          </div>
+          <div class="menu-tree-container" style="background: #F0F7FF; border-color: var(--color-brand-hisense);">
+            <h3 style="color: var(--color-brand-hisense);">AI 画质引擎（特色模块）</h3>
+            <div class="menu-tree">
+              <div class="tree-node root"><span class="tn-icon">▸</span><span class="tn-box" style="background: var(--color-brand-hisense);">AI 画质总控</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">AI 场景识别（自动）</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">电影 / 体育 / 新闻 / 动画</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│└</span><span class="tn-box">游戏 / 照片 / 音乐</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">AI 色彩增强</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│└</span><span class="tn-box">肤色保护 / 色域自适应扩展</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">AI 清晰度增强</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│└</span><span class="tn-box">超分辨率 / 边缘锐化</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">AI 运动补偿</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│└</span><span class="tn-box">智能插帧 / 抖动消除</span></div>
+              <div class="tree-node l1"><span class="tn-icon">└</span><span class="tn-box">AI 光感（环境光自适应）</span></div>
+            </div>
+            <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid var(--color-border); font-size: 13px; color: var(--color-text-secondary); line-height: 1.5;"><b style="color: var(--color-brand-hisense);">优势：</b>AI 画质项目丰富，场景自动识别减少手动调节<br><b style="color: var(--color-primary);">不足：</b>专业校准仅 2 点白平衡 + RGB 滑块 CMS，精度落后于索尼/LG</div>
+          </div>
+        </div>
+        <div class="slide-footer"><div>ProductPilot 竞品分析 | 海信菜单层级树 | 基于公开文档整理（部分待验证）</div><div>07 / 18</div></div>
+      </div>
+
+      <!-- 第 8 页: 索尼画质设置菜单概览 -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area"><h1 class="slide-title">索尼画质设置菜单概览</h1><span class="slide-category">竞品分析 · 索尼</span></div>
+          <div class="title-divider"></div>
+          <div class="header-right"><div class="confidential-box">机密材料，请勿外传</div><div class="logo-container"><svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012"><path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/></svg></div></div>
+        </div>
+        <div class="section-banner">核心结论：索尼以专业校准深度见长，Reality Creation 与 Motionflow 独家算法是技术壁垒</div>
+        <div class="grid-2-col animate-fade-up" style=" margin-bottom: 0;">
+          <div class="brand-card" style="border-left: 4px solid var(--color-brand-sony);">
+            <div class="bc-header"><div class="bc-logo" style="background: var(--color-brand-sony);">S</div><div><div class="bc-name">索尼（Sony）</div><div class="bc-subtitle">Google TV 系统 · BRAVIA 系列<span class="verify-tag">待验证</span></div></div></div>
+            <div><div class="bc-section-title">菜单入口路径</div><div style="font-size: 15px; margin-top: 4px;">设置 → 显示和声音 → 画面</div><div style="font-size: 13px; color: var(--color-text-tertiary); margin-top: 2px;">遥控器快捷键：无独立画质键，需通过菜单进入</div></div>
+            <div><div class="bc-section-title">预设模式</div><div class="bc-feature-list" style="margin-top: 4px;"><li>标准 / 影院 / 体育 / 游戏 / 图形 / 生动 / 自定义</li><li>Netflix 校准模式（Netflix Calibrated Mode）</li><li>影院专业 / 影院家庭（双影院模式区分）</li></div></div>
+            <div><div class="bc-section-title">核心功能项</div><div class="bc-feature-list" style="margin-top: 4px;"><li>亮度 / 色彩 / 色调 / 锐度</li><li>Reality Creation（真实创建）</li><li>平滑渐变 / 随机噪点降噪 / 数字降噪</li><li>Motionflow / CineMotion（运动补偿与电影还原）</li><li>HDR 模式 / Live Color / 色温</li><li>白平衡（高级）/ 色彩管理 / Gamma</li></div></div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="brand-card" style="border-left: 4px solid var(--color-accent-green);  ">
+              <div class="bc-section-title" style="color: var(--color-accent-green);">差异化亮点</div>
+              <div class="bc-feature-list" style="margin-top: 8px;">
+                <li><b>Reality Creation</b>：独家超分辨率算法，可调分辨率/噪点抑制/压缩降噪三参数</li>
+                <li><b>Netflix Calibrated Mode</b>：与 Netflix 联合校准，一键还原创作者意图</li>
+                <li><b>双影院模式</b>：影院专业（暗室）/ 影院家庭（明亮环境）精准适配</li>
+                <li><b>CineMotion</b>：电影胶片 Cadence 还原，支持 24p 精准输出</li>
+              </div>
+              <div class="bc-score"><span class="bc-score-tag" style="background: #ECFDF5; color: var(--color-accent-green);">校准专业度最高</span><span class="bc-score-tag" style="background: #EFF6FF; color: var(--color-accent-blue);">独家算法壁垒</span></div>
+            </div>
+            <div class="brand-card" style="border-left: 4px solid var(--color-primary);  ">
+              <div class="bc-section-title" style="color: var(--color-primary);">待改进项</div>
+              <div class="bc-feature-list" style="margin-top: 8px;">
+                <li>入口路径偏深，从主页到画面设置需 3 步以上</li>
+                <li>缺少独立游戏面板，游戏参数分散在多个层级</li>
+                <li>菜单分类用词专业但学习成本高（如 Reality Creation）</li>
+              </div>
+              <div class="bc-score"><span class="bc-score-tag" style="background: var(--color-primary-light); color: var(--color-primary);">入口偏深</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="slide-footer"><div>ProductPilot 竞品分析 | 索尼画质菜单 | 数据来源：官方文档与公开评测（部分待验证）</div><div>08 / 18</div></div>
+      </div>
+
+      <!-- 第 9 页: 索尼菜单层级树 -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area"><h1 class="slide-title">索尼画质菜单层级树</h1><span class="slide-category">竞品分析 · 索尼</span></div>
+          <div class="title-divider"></div>
+          <div class="header-right"><div class="confidential-box">机密材料，请勿外传</div><div class="logo-container"><svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012"><path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/></svg></div></div>
+        </div>
+        <div class="section-banner">层级深度 4 级：设置 → 显示和声音 → 画面 → 高级设置，专业校准项最深可达 5 级</div>
+        <div class="grid-2-col animate-fade-up" style=" margin-bottom: 0;">
+          <div class="menu-tree-container">
+            <h3>设置 → 显示和声音 → 画面</h3>
+            <div class="menu-tree">
+              <div class="tree-node root"><span class="tn-icon">▸</span><span class="tn-box">设置</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">显示和声音 ▾</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">画面模式</span></div>
+              <div class="tree-node l3"><span class="tn-icon">││</span><span class="tn-box">标准/影院pro/影院home/体育/游戏/图形/生动</span></div>
+              <div class="tree-node l3"><span class="tn-icon">││</span><span class="tn-box">Netflix 校准模式 / 自定义</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">亮度</span></div>
+              <div class="tree-node l3"><span class="tn-icon">││└</span><span class="tn-box">亮度 / 自动亮度调节</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">色彩</span></div>
+              <div class="tree-node l3"><span class="tn-icon">││└</span><span class="tn-box">色彩 / 色调 / Live Color</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">锐度</span></div>
+              <div class="tree-node l3"><span class="tn-icon">││└</span><span class="tn-box">锐度 / 随机噪点降噪 / 数字降噪</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">运动</span></div>
+              <div class="tree-node l3"><span class="tn-icon">││└</span><span class="tn-box">Motionflow / CineMotion</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">高级设置 ▾</span></div>
+              <div class="tree-node l3"><span class="tn-icon">││├</span><span class="tn-box">Reality Creation（分辨率/噪点/压缩）</span></div>
+              <div class="tree-node l3"><span class="tn-icon">││├</span><span class="tn-box">平滑渐变</span></div>
+              <div class="tree-node l3"><span class="tn-icon">││├</span><span class="tn-box">HDR 模式 / HDR→SDR 转换</span></div>
+              <div class="tree-node l3"><span class="tn-icon">││├</span><span class="tn-box">色温</span></div>
+              <div class="tree-node l3"><span class="tn-icon">│││└</span><span class="tn-box">高级色温 → 白平衡（10 点）</span></div>
+              <div class="tree-node l3"><span class="tn-icon">│││└</span><span class="tn-box">色彩管理（CMS）</span></div>
+              <div class="tree-node l3"><span class="tn-icon">│││└</span><span class="tn-box">Gamma（-2 ~ +2）</span></div>
+              <div class="tree-node l3"><span class="tn-icon">││└</span><span class="tn-box">重置</span></div>
+              <div class="tree-node l1"><span class="tn-icon">└</span><span class="tn-box">输入信号 / HDMI 增强</span></div>
+            </div>
+          </div>
+          <div class="menu-tree-container" style="background: #F5F5F5; border-color: var(--color-brand-sony);">
+            <h3 style="color: var(--color-brand-sony);">专业校准模块（深度拆解）</h3>
+            <div class="menu-tree">
+              <div class="tree-node root"><span class="tn-icon">▸</span><span class="tn-box" style="background: var(--color-brand-sony);">高级设置 → 专业校准</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">白平衡（10 点）</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">R/G/B 增益（高光）</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">R/G/B 偏置（暗部）</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│└</span><span class="tn-box">10 点 IRE 灰阶校准</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">色彩管理系统（CMS）</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">红/绿/蓝 色调+饱和度</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">黄/青/品红 色调+饱和度</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│└</span><span class="tn-box">色域空间：DCI-P3 / BT.2020</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">Gamma 曲线</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│└</span><span class="tn-box">5 级预设（-2 ~ +2）</span></div>
+              <div class="tree-node l1"><span class="tn-icon">└</span><span class="tn-box">Calman AutoCal<span class="verify-tag">待验证</span></span></div>
+            </div>
+            <div style="margin-top: auto; padding-top: 12px; border-top: 1px solid var(--color-border); font-size: 13px; color: var(--color-text-secondary); line-height: 1.5;"><b style="color: var(--color-brand-sony);">优势：</b>10 点白平衡 + 6 色 CMS + Calman AutoCal，校准深度四家最强<br><b style="color: var(--color-primary);">不足：</b>入口深达 5 级，普通用户几乎无法触达</div>
+          </div>
+        </div>
+        <div class="slide-footer"><div>ProductPilot 竞品分析 | 索尼菜单层级树 | 基于公开文档整理（部分待验证）</div><div>09 / 18</div></div>
+      </div>
+
+      <!-- 第 10 页: LG 概览 -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area"><h1 class="slide-title">LG 画质菜单概览</h1><span class="slide-category">竞品分析 · LG（webOS）</span></div>
+          <div class="title-divider"></div>
+          <div class="header-right"><div class="confidential-box">机密材料，请勿外传</div><div class="logo-container"><svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012"><path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/></svg></div></div>
+        </div>
+        <div class="grid-2-col animate-fade-up" style=" margin-bottom: 0;">
+          <div class="brand-card" style="border-color: var(--color-brand-lg);">
+            <div class="bc-header" style="border-bottom-color: var(--color-brand-lg);">
+              <div class="bc-logo" style="background: var(--color-brand-lg);">LG</div>
+              <div><div class="bc-name">LG — webOS 系统</div><div class="bc-subtitle">OLED 画质调校 + Game Optimizer 游戏中心</div></div>
+            </div>
+            <div class="bc-section-title">系统特征</div>
+            <ul class="bc-feature-list">
+              <li>基于 webOS 的独立自研系统，菜单逻辑区别于 Google TV</li>
+              <li>画质设置集中于「全部设置 → 画面」与「游戏优化器」两个入口</li>
+              <li>OLED 原生优势：像素级控光，无需独立局域控光分区设置</li>
+              <li>AI Picture Pro 由 α9 / α11 处理器驱动，支持场景识别</li>
+            </ul>
+            <div class="bc-section-title">核心画质模块</div>
+            <div class="bc-score">
+              <span class="bc-score-tag" style="background: #FCE7F0; color: var(--color-brand-lg);">AI 画质 Pro</span>
+              <span class="bc-score-tag" style="background: #FCE7F0; color: var(--color-brand-lg);">OLED 像素控光</span>
+              <span class="bc-score-tag" style="background: #FCE7F0; color: var(--color-brand-lg);">Filmmaker Mode</span>
+              <span class="bc-score-tag" style="background: #FCE7F0; color: var(--color-brand-lg);">游戏优化器</span>
+            </div>
+          </div>
+          <div class="brand-card" style="background: #FBF9FA;">
+            <div class="bc-section-title" style="color: var(--color-brand-lg);">LG 画质菜单特点</div>
+            <ul class="bc-feature-list">
+              <li><b>双入口设计</b>：通用画质走「画面」菜单，游戏画质独立走「游戏优化器」</li>
+              <li><b>OLED 专属项</b>：包含「OLED 像素亮度」「OLED 运动平滑度」等 OLED 特有参数</li>
+              <li><b>杜比视界 IQ</b>：内置杜比视界与杜比视界 IQ（随环境光自适应）<span class="verify-tag">待验证</span></li>
+              <li><b>白平衡 2 点 + 20 点</b>：提供 ISF 专业模式下 20 点白平衡校准<span class="verify-tag">待验证</span></li>
+              <li><b>Calman 联合校准</b>：支持 Calman 自动校准（AutoCal）<span class="verify-tag">待验证</span></li>
+            </ul>
+            <div class="bc-section-title" style="color: #999;">相对短板</div>
+            <ul class="bc-feature-list">
+              <li>CMS 色彩管理隐藏较深，普通用户不易触达</li>
+              <li>webOS 菜单层级相对分明，但专业项分类不够直观</li>
+              <li>国内本地化资源（相比海信）相对薄弱</li>
+            </ul>
+          </div>
+        </div>
+        <div class="slide-footer"><div>ProductPilot 竞品分析 | LG 菜单概览 | 基于公开文档整理（部分待验证）</div><div>10 / 18</div></div>
+      </div>
+
+      <!-- 第 11 页: LG 层级树 -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area"><h1 class="slide-title">LG 画质菜单层级树</h1><span class="slide-category">竞品分析 · LG</span></div>
+          <div class="title-divider"></div>
+          <div class="header-right"><div class="confidential-box">机密材料，请勿外传</div><div class="logo-container"><svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012"><path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/></svg></div></div>
+        </div>
+        <div class="section-banner">层级深度 3 级：全部设置 → 画面 → 详细设置，游戏画质独立入口「游戏优化器」可达 2 级</div>
+        <div class="grid-2-col animate-fade-up" style=" margin-bottom: 0;">
+          <div class="menu-tree-container">
+            <h3>全部设置 → 画面</h3>
+            <div class="menu-tree">
+              <div class="tree-node root"><span class="tn-icon">▸</span><span class="tn-box">全部设置</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">画面 ▾</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">画质模式</span></div>
+              <div class="tree-node l3"><span class="tn-icon">││└</span><span class="tn-box">鲜艳/标准/节能/ECO/影院/游戏/体育/ISF 专家</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">亮度 / 对比度 / 屏幕亮度</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">OLED 像素亮度</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">色彩 / 色调 / 色温</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">锐度</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">AI 画质 Pro（自动/关闭）</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">动态色调映射</span></div>
+              <div class="tree-node l3"><span class="tn-icon">││└</span><span class="tn-box">杜比视界 IQ / HGiG / 基本</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">降噪 / MPEG 降噪</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">详细设置 ▾</span></div>
+              <div class="tree-node l3"><span class="tn-icon">││├</span><span class="tn-box">白平衡（2 点 / 20 点）</span></div>
+              <div class="tree-node l3"><span class="tn-icon">││├</span><span class="tn-box">色彩管理（CMS）</span></div>
+              <div class="tree-node l3"><span class="tn-icon">││└</span><span class="tn-box">Gamma（1.8~2.4）</span></div>
+              <div class="tree-node l1"><span class="tn-icon">└</span><span class="tn-box">游戏优化器</span></div>
+            </div>
+          </div>
+          <div class="menu-tree-container" style="background: #FBF9FA; border-color: var(--color-brand-lg);">
+            <h3 style="color: var(--color-brand-lg);">游戏优化器 + 专业校准模块</h3>
+            <div class="menu-tree">
+              <div class="tree-node root"><span class="tn-icon">▸</span><span class="tn-box" style="background: var(--color-brand-lg);">游戏优化器</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">游戏画质模式（FPS/RPG/标准/自定义）</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">VRR / 自动低延迟（ALLM）</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">黑色稳定器 / 减少蓝光</span></div>
+              <div class="tree-node l1"><span class="tn-icon">├</span><span class="tn-box">响应时间 / 动态色调映射</span></div>
+              <div class="tree-node l1"><span class="tn-icon">└</span><span class="tn-box">FineTune Dark（暗部微调）</span></div>
+              <div class="tree-node root" style="margin-top: 8px;"><span class="tn-icon">▸</span><span class="tn-box" style="background: var(--color-brand-lg);">ISF 专业模式</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">白平衡 20 点 IRE</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">6 原色 CMS</span></div>
+              <div class="tree-node l2"><span class="tn-icon">│├</span><span class="tn-box">10 点 Gamma</span></div>
+            </div>
+            <div style="margin-top: auto; padding-top: 12px; border-top: 1px solid var(--color-border); font-size: 13px; color: var(--color-text-secondary); line-height: 1.5;"><b style="color: var(--color-brand-lg);">优势：</b>游戏优化器独立入口，OLED 画质调校成熟<br><b style="color: var(--color-primary);">不足：</b>CMS 隐藏深，专业模式默认关闭需手动开启</div>
+          </div>
+        </div>
+        <div class="slide-footer"><div>ProductPilot 竞品分析 | LG 菜单层级树 | 基于公开文档整理（部分待验证）</div><div>11 / 18</div></div>
+      </div>
+
+      <!-- 第 12 页: 横向对比矩阵 - 菜单结构 -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area"><h1 class="slide-title">横向对比矩阵 · 菜单结构</h1><span class="slide-category">维度一（权重 25%）· 信息架构对比</span></div>
+          <div class="title-divider"></div>
+          <div class="header-right"><div class="confidential-box">机密材料，请勿外传</div><div class="logo-container"><svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012"><path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/></svg></div></div>
+        </div>
+        <div class="section-banner">结构差异：Google TV 三家（TCL/索尼）路径趋同，海信 VIDAA 与 LG webOS 自成体系；层级深度 3~5 级不等</div>
+        <table class="comparison-table animate-fade-up" style=" margin-bottom: 20px;">
+          <thead>
+            <tr><th class="col-label" style="text-align:left;">结构指标</th><th style="color:#fff;"><span class="brand-dot" style="background:var(--color-brand-tcl);"></span>TCL</th><th style="color:#fff;"><span class="brand-dot" style="background:var(--color-brand-hisense);"></span>海信</th><th style="color:#fff;"><span class="brand-dot" style="background:var(--color-brand-sony);"></span>索尼</th><th style="color:#fff;"><span class="brand-dot" style="background:var(--color-brand-lg);"></span>LG</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="col-label">操作系统</td><td>Google TV</td><td>VIDAA</td><td>Google TV</td><td>webOS</td></tr>
+            <tr><td class="col-label">画质主入口</td><td>设置 → 显示</td><td>设置 → 图像</td><td>设置 → 显示和声音 → 画面</td><td>全部设置 → 画面</td></tr>
+            <tr><td class="col-label">菜单层级深度</td><td>3~4 级</td><td>3 级</td><td>4~5 级</td><td>3 级</td></tr>
+            <tr><td class="col-label">分类逻辑</td><td>按功能分组</td><td>按功能分组</td><td>按信号/场景分组</td><td>按场景+游戏分组</td></tr>
+            <tr><td class="col-label">常用功能快捷入口</td><td class="cell-partial">部分（快速设置栏）</td><td class="cell-yes">有（快捷卡片）</td><td class="cell-partial">部分（快速设置）</td><td class="cell-yes">有（快速设置）</td></tr>
+            <tr><td class="col-label">游戏画质入口</td><td class="cell-yes">Game Master</td><td class="cell-yes">游戏模式</td><td class="cell-yes">游戏模式</td><td class="cell-yes">游戏优化器（独立）</td></tr>
+            <tr><td class="col-label">信息架构评分</td><td class="cell-partial">B+</td><td class="cell-yes">A-</td><td class="cell-partial">B</td><td class="cell-yes">A-</td></tr>
+          </tbody>
+        </table>
+        <div class="slide-footer"><div>ProductPilot 竞品分析 | 菜单结构对比 | 评分为综合判定（部分待验证）</div><div>12 / 18</div></div>
+      </div>
+
+      <!-- 第 13 页: 横向对比矩阵 - 功能完整度 -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area"><h1 class="slide-title">横向对比矩阵 · 功能完整度</h1><span class="slide-category">维度二（权重 30%）· 核心画质功能覆盖</span></div>
+          <div class="title-divider"></div>
+          <div class="header-right"><div class="confidential-box">机密材料，请勿外传</div><div class="logo-container"><svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012"><path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/></svg></div></div>
+        </div>
+        <div class="section-banner">功能覆盖：四家 HDR 与基础画质项高度趋同；差异集中在 AI 画质、局域控光深度与游戏增强的颗粒度</div>
+        <table class="comparison-table animate-fade-up" style=" margin-bottom: 20px;">
+          <thead>
+            <tr><th class="col-label" style="text-align:left;">功能项</th><th style="color:#fff;">TCL</th><th style="color:#fff;">海信</th><th style="color:#fff;">索尼</th><th style="color:#fff;">LG</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="col-label">HDR 格式（DV/HDR10+/HLG）</td><td class="cell-yes">✓ 全支持</td><td class="cell-yes">✓ 全支持</td><td class="cell-yes">✓ 全支持</td><td class="cell-yes">✓ 全支持</td></tr>
+            <tr><td class="col-label">局域控光（Local Dimming）</td><td class="cell-yes">✓（高分区）</td><td class="cell-yes">✓（ULED X）</td><td class="cell-partial">~（MiniLED）</td><td class="cell-no">OLED 原生</td></tr>
+            <tr><td class="col-label">运动补偿（MEMC / Motionflow）</td><td class="cell-yes">✓</td><td class="cell-yes">✓</td><td class="cell-yes">✓ Motionflow</td><td class="cell-yes">✓ OLED 平滑</td></tr>
+            <tr><td class="col-label">AI 画质增强</td><td class="cell-yes">✓ AI 画质</td><td class="cell-yes">✓ AI 画质 + 信芯</td><td class="cell-yes">✓ XR 认知</td><td class="cell-yes">✓ AI Picture Pro</td></tr>
+            <tr><td class="col-label">色彩管理系统（CMS）</td><td class="cell-partial">~ 基础</td><td class="cell-partial">~ 基础</td><td class="cell-yes">✓ 6 色全</td><td class="cell-yes">✓ 6 色全</td></tr>
+            <tr><td class="col-label">降噪 / 细节增强</td><td class="cell-yes">✓</td><td class="cell-yes">✓</td><td class="cell-yes">✓ Reality Creation</td><td class="cell-yes">✓</td></tr>
+            <tr><td class="col-label">游戏增强（VRR/ALLM/HgIG）</td><td class="cell-yes">✓ 全</td><td class="cell-yes">✓ 全</td><td class="cell-yes">✓ 全</td><td class="cell-yes">✓ 全（优化器）</td></tr>
+            <tr><td class="col-label">功能完整度评分</td><td class="cell-yes">A</td><td class="cell-yes">A</td><td class="cell-yes">A+</td><td class="cell-yes">A</td></tr>
+          </tbody>
+        </table>
+        <div class="slide-footer"><div>ProductPilot 竞品分析 | 功能完整度对比 | ✓支持 ~部分 ✗无（部分待验证）</div><div>13 / 18</div></div>
+      </div>
+
+      <!-- 第 14 页: 横向对比矩阵 - 专业校准与交互 -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area"><h1 class="slide-title">横向对比矩阵 · 专业校准与交互</h1><span class="slide-category">维度三+四（权重 45%）· 校准深度与易用性</span></div>
+          <div class="title-divider"></div>
+          <div class="header-right"><div class="confidential-box">机密材料，请勿外传</div><div class="logo-container"><svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012"><path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/></svg></div></div>
+        </div>
+        <div class="section-banner">校准深度：索尼与 LG 提供 10~20 点白平衡 + 全 CMS，专业度领先；交互易用性上海信、LG 路径更短</div>
+        <table class="comparison-table animate-fade-up" style=" margin-bottom: 20px;">
+          <thead>
+            <tr><th class="col-label" style="text-align:left;">指标</th><th style="color:#fff;">TCL</th><th style="color:#fff;">海信</th><th style="color:#fff;">索尼</th><th style="color:#fff;">LG</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="col-label">白平衡点位数</td><td class="cell-partial">2 点</td><td class="cell-partial">2 点</td><td class="cell-yes">10 点</td><td class="cell-yes">2/20 点</td></tr>
+            <tr><td class="col-label">CMS 色域管理</td><td class="cell-partial">~ 基础</td><td class="cell-partial">~ 基础</td><td class="cell-yes">✓ 全色域</td><td class="cell-yes">✓ 全色域</td></tr>
+            <tr><td class="col-label">Gamma 调节</td><td class="cell-yes">✓ 多档</td><td class="cell-yes">✓ 多档</td><td class="cell-yes">✓ 5 档</td><td class="cell-yes">✓ 1.8~2.4</td></tr>
+            <tr><td class="col-label">自动校准（Calman AutoCal）</td><td class="cell-no">✗</td><td class="cell-no">✗</td><td class="cell-yes">✓</td><td class="cell-yes">✓</td></tr>
+            <tr><td class="col-label">十英尺交互效率</td><td class="cell-partial">B+</td><td class="cell-yes">A-</td><td class="cell-partial">B</td><td class="cell-yes">A-</td></tr>
+            <tr><td class="col-label">实时预览 / 参数引导</td><td class="cell-partial">~ 部分</td><td class="cell-yes">✓ 引导强</td><td class="cell-partial">~ 部分</td><td class="cell-yes">✓ 引导强</td></tr>
+            <tr><td class="col-label">综合校准评分</td><td class="cell-partial">B</td><td class="cell-partial">B</td><td class="cell-yes">A+</td><td class="cell-yes">A</td></tr>
+          </tbody>
+        </table>
+        <div class="slide-footer"><div>ProductPilot 竞品分析 | 专业校准与交互对比 | ✓支持 ~部分 ✗无（部分待验证）</div><div>14 / 18</div></div>
+      </div>
+
+      <!-- 第 15 页: 场景预设模式对比 -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area"><h1 class="slide-title">场景预设模式对比</h1><span class="slide-category">画质模式矩阵 · 出厂预设横向对比</span></div>
+          <div class="title-divider"></div>
+          <div class="header-right"><div class="confidential-box">机密材料，请勿外传</div><div class="logo-container"><svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012"><path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/></svg></div></div>
+        </div>
+        <div class="section-banner">预设策略：索尼、LG 以「电影/ISF 专业」建立发烧友心智；海信、TCL 更强调 AI 自动与场景化一键切换</div>
+        <table class="comparison-table animate-fade-up" style=" margin-bottom: 20px;">
+          <thead>
+            <tr><th class="col-label" style="text-align:left;">场景模式</th><th style="color:#fff;">TCL</th><th style="color:#fff;">海信</th><th style="color:#fff;">索尼</th><th style="color:#fff;">LG</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="col-label">影院 / 电影模式</td><td class="cell-yes">电影</td><td class="cell-yes">影院</td><td class="cell-yes">影院 Pro / Home</td><td class="cell-yes">影院（Filmmaker）</td></tr>
+            <tr><td class="col-label">标准 / 日常</td><td class="cell-yes">标准</td><td class="cell-yes">标准</td><td class="cell-yes">标准</td><td class="cell-yes">标准</td></tr>
+            <tr><td class="col-label">游戏模式</td><td class="cell-yes">游戏（Game Master）</td><td class="cell-yes">游戏</td><td class="cell-yes">游戏</td><td class="cell-yes">游戏优化器</td></tr>
+            <tr><td class="col-label">体育 / 动态</td><td class="cell-yes">体育</td><td class="cell-yes">体育</td><td class="cell-yes">体育</td><td class="cell-yes">体育</td></tr>
+            <tr><td class="col-label">鲜艳 / 动态</td><td class="cell-yes">鲜艳</td><td class="cell-yes">鲜艳</td><td class="cell-yes">生动</td><td class="cell-yes">鲜艳</td></tr>
+            <tr><td class="col-label">专业 / ISF 校准</td><td class="cell-partial">~ 自定义</td><td class="cell-partial">~ 自定义</td><td class="cell-yes">✓ 专业模式</td><td class="cell-yes">✓ ISF 专家</td></tr>
+            <tr><td class="col-label">AI 自动画质</td><td class="cell-yes">✓ AI 画质</td><td class="cell-yes">✓ AI 画质</td><td class="cell-yes">✓ XR 自动</td><td class="cell-yes">✓ AI Picture Pro</td></tr>
+            <tr><td class="col-label">杜比视界预设</td><td class="cell-yes">✓ 暗/亮</td><td class="cell-yes">✓ 暗/亮</td><td class="cell-yes">✓ 暗/亮/明亮</td><td class="cell-yes">✓ IQ</td></tr>
+          </tbody>
+        </table>
+        <div class="slide-footer"><div>ProductPilot 竞品分析 | 场景预设模式对比 | 模式命名以各品牌公开手册为准（部分待验证）</div><div>15 / 18</div></div>
+      </div>
+
+      <!-- 第 16 页: 综合评分总览 -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area"><h1 class="slide-title">综合评分总览</h1><span class="slide-category">四维度加权总分 · 0~100 分</span></div>
+          <div class="title-divider"></div>
+          <div class="header-right"><div class="confidential-box">机密材料，请勿外传</div><div class="logo-container"><svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012"><path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/></svg></div></div>
+        </div>
+        <div class="grid-2-col animate-fade-up" style=" margin-bottom: 0; align-items: stretch;">
+          <div style="display: flex; flex-direction: column; gap: 16px; justify-content: center;">
+            <div class="score-summary-card">
+              <div style="display:flex; justify-content:space-between; align-items:center;"><span class="ssc-brand"><span class="brand-dot" style="background:var(--color-brand-lg);"></span>LG</span><span class="ssc-score">90 分 · 综合领先</span></div>
+              <div class="ssc-bar-bg"><div class="ssc-bar-fill" style="width:90%; background:var(--color-brand-lg);"></div></div>
+            </div>
+            <div class="score-summary-card">
+              <div style="display:flex; justify-content:space-between; align-items:center;"><span class="ssc-brand"><span class="brand-dot" style="background:var(--color-brand-sony);"></span>索尼</span><span class="ssc-score">87 分 · 专业度最高</span></div>
+              <div class="ssc-bar-bg"><div class="ssc-bar-fill" style="width:87%; background:var(--color-brand-sony);"></div></div>
+            </div>
+            <div class="score-summary-card">
+              <div style="display:flex; justify-content:space-between; align-items:center;"><span class="ssc-brand"><span class="brand-dot" style="background:var(--color-brand-hisense);"></span>海信</span><span class="ssc-score">86 分 · 交互最优</span></div>
+              <div class="ssc-bar-bg"><div class="ssc-bar-fill" style="width:86%; background:var(--color-brand-hisense);"></div></div>
+            </div>
+            <div class="score-summary-card">
+              <div style="display:flex; justify-content:space-between; align-items:center;"><span class="ssc-brand"><span class="brand-dot" style="background:var(--color-brand-tcl);"></span>TCL</span><span class="ssc-score">82 分 · 校准待补强</span></div>
+              <div class="ssc-bar-bg"><div class="ssc-bar-fill" style="width:82%; background:var(--color-brand-tcl);"></div></div>
+            </div>
+          </div>
+          <div class="gray-card" style="padding: 20px 24px; display: flex; flex-direction: column;">
+            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 14px; color: var(--color-text-primary);">维度得分雷达（评分详情）</h3>
+            <table class="comparison-table" style="font-size: 13px;">
+              <thead><tr><th class="col-label" style="text-align:left;">维度（权重）</th><th style="color:#fff;">TCL</th><th style="color:#fff;">海信</th><th style="color:#fff;">索尼</th><th style="color:#fff;">LG</th></tr></thead>
+              <tbody>
+                <tr><td class="col-label">结构 25%</td><td>82</td><td>90</td><td>78</td><td>90</td></tr>
+                <tr><td class="col-label">功能 30%</td><td>88</td><td>88</td><td>95</td><td>90</td></tr>
+                <tr><td class="col-label">交互 25%</td><td>84</td><td>90</td><td>80</td><td>88</td></tr>
+                <tr><td class="col-label">校准 20%</td><td>72</td><td>74</td><td>95</td><td>90</td></tr>
+              </tbody>
+            </table>
+            <div style="margin-top: auto; padding-top: 12px; font-size: 13px; color: var(--color-text-secondary); line-height: 1.6;"><b style="color:var(--color-primary);">关键发现：</b>TCL 在结构与功能上已具竞争力，但与索尼（校准 95）、LG（校准 90）相比，<b>专业校准维度存在 18~23 分差距</b>，是总分落后的主因，也是最高优先级的补齐方向。</div>
+          </div>
+        </div>
+        <div class="slide-footer"><div>ProductPilot 竞品分析 | 综合评分总览 | 加权公式：结构×25%+功能×30%+交互×25%+校准×20%（部分待验证）</div><div>16 / 18</div></div>
+      </div>
+
+      <!-- 第 17 页: SWOT 分析 -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area"><h1 class="slide-title">SWOT 分析 · TCL 画质菜单</h1><span class="slide-category">基于四家对比的自身定位</span></div>
+          <div class="title-divider"></div>
+          <div class="header-right"><div class="confidential-box">机密材料，请勿外传</div><div class="logo-container"><svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012"><path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 0.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/></svg></div></div>
+        </div>
+        <div class="swot-grid animate-fade-up" style="margin-bottom: 20px;">
+          <div class="swot-quadrant s">
+            <span class="sq-label">S · 优势</span>
+            <ul>
+              <li>功能覆盖全面，HDR / 局域控光 / 游戏增强齐全</li>
+              <li>Game Master 独立游戏画质入口，路径清晰</li>
+              <li>Google TV 生态成熟，AI 画质已落地</li>
+              <li>高分区 Mini LED 硬件基础领先同价位</li>
+            </ul>
+          </div>
+          <div class="swot-quadrant w">
+            <span class="sq-label">W · 劣势</span>
+            <ul>
+              <li>专业校准弱：仅 2 点白平衡、基础 CMS</li>
+              <li>无 Calman 自动校准，发烧友心智缺失</li>
+              <li>菜单层级偏深，专业项入口不直观</li>
+              <li>参数引导与实时预览弱于海信 / LG</li>
+            </ul>
+          </div>
+          <div class="swot-quadrant o">
+            <span class="sq-label">O · 机会</span>
+            <ul>
+              <li>AI 画质向导：用 AI 替代手动专业校准门槛</li>
+              <li>本地化参数引导 + 一键校准助手（差异化）</li>
+              <li>电视游戏场景增长，Game Master 可深化</li>
+              <li>中端机型补齐 10 点白平衡即可上探口碑</li>
+            </ul>
+          </div>
+          <div class="swot-quadrant t">
+            <span class="sq-label">T · 威胁</span>
+            <ul>
+              <li>索尼 / LG 专业校准领先，占据发烧友心智</li>
+              <li>海信本地化交互与 AI 画质体验更优</li>
+              <li>竞品 ISF / 电影模式建立专业信任状</li>
+              <li>校准能力差距在评测中易被放大</li>
+            </ul>
+          </div>
+        </div>
+        <div class="slide-footer"><div>ProductPilot 竞品分析 | SWOT 分析（TCL 视角）| 内部研判</div><div>17 / 18</div></div>
+      </div>
+
+      <!-- 第 18 页: 差异化策略与行动建议 -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area"><h1 class="slide-title">差异化策略与行动建议</h1><span class="slide-category">结论 · 产品规划输入</span></div>
+          <div class="title-divider"></div>
+          <div class="header-right"><div class="confidential-box">机密材料，请勿外传</div><div class="logo-container"><svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012"><path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/></svg></div></div>
+        </div>
+        <div class="grid-2-col animate-fade-up" style=" margin-bottom: 0;">
+          <div style="display:flex; flex-direction:column; gap:14px;">
+            <div class="strategy-card">
+              <span class="sc-tag attack">进攻 · 补齐专业校准</span>
+              <h3>缩小与索尼 / LG 的校准差距</h3>
+              <ul class="sc-items">
+                <li>旗舰机型引入 10~20 点白平衡 + 全色域 CMS</li>
+                <li>上线「一键校准向导」，用 AI 替代专业门槛</li>
+                <li>探索 Calman 合作或自研自动校准流程</li>
+              </ul>
+            </div>
+            <div class="strategy-card">
+              <span class="sc-tag defend">防御 · 巩固现有优势</span>
+              <h3>放大功能完整度与游戏画质</h3>
+              <ul class="sc-items">
+                <li>深化 Game Master：分场景预设 + VRR 可视化</li>
+                <li>保持 HDR 全格式与高分区 Mini LED 硬件领先</li>
+                <li>强化 AI 画质作为默认档，建立「开箱即好」心智</li>
+              </ul>
+            </div>
+          </div>
+          <div class="gray-card" style="padding: 20px 24px; display:flex; flex-direction:column;">
+            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--color-primary);">结论 · 三条行动建议</h3>
+            <ul class="bullet-list" style="font-size: 15px;">
+              <li><b>P0 — 校准补强</b>：旗舰引入 10 点白平衡 + CMS，缩小 18~23 分差距<span class="l5-desc">优先级最高，直接影响评测口碑</span></li>
+              <li><b>P1 — 交互优化</b>：扁平化专业项入口，增加参数引导与实时预览<span class="l5-desc">对齐海信 / LG 的 A- 交互水平</span></li>
+              <li><b>P2 — AI 差异化</b>：用 AI 校准向导建立「专业画质平民化」标签<span class="l5-desc">避开与索尼硬拼硬件校准，走差异化路线</span></li>
+            </ul>
+            <div style="margin-top:auto; padding-top:14px; border-top:1px solid var(--color-border); font-size:13px; color:var(--color-text-secondary); line-height:1.6;"><b style="color:var(--color-primary);">一句话结论：</b>TCL 功能与结构已具备竞争力，专业校准是核心短板；以「AI 校准向导 + 旗舰校准补强」双线突围，是性价比最高的差异化路径。</div>
+          </div>
+        </div>
+        <div class="slide-footer"><div>ProductPilot 竞品分析 | 差异化策略与行动建议 | 内部产品规划输入（部分待验证）</div><div>18 / 18</div></div>
+      </div>
+<div id="progress-bar"></div>
+
+  <script>
+    /* PDF 滚动模式 — 视口自适应缩放 */
+    const SLIDE_W = 1920;
+
+    function scaleToViewport() {
+      const scale = Math.min(1, window.innerWidth / SLIDE_W);
+      const container = document.getElementById('deck-container');
+      container.style.transform = `scale(${scale})`;
+      container.style.transformOrigin = 'top center';
+      // 补偿 scale 后的实际占高，避免底部截断
+      const deck = document.getElementById('deck');
+      const realH = deck.getBoundingClientRect().height * scale;
+      container.style.marginBottom = `${realH - deck.offsetHeight * scale}px`;
+    }
+
+    window.addEventListener('resize', scaleToViewport);
+    scaleToViewport();
+  </script>
+</body>
+</html>

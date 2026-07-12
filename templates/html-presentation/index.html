@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProductPilot 高还原 HTML 幻灯片模板 (TCL 官方白底风格)</title>
+  <style>
+    /* ==============================================================================
+       1. 设计系统变量 (Design System Variables) - TCL 官方白底风格
+       ============================================================================== */
+    :root {
+      /* 色彩系统 - 对齐历史 PDF 配色 */
+      --color-primary: #E60012;      /* TCL 经典品牌红 */
+      --color-primary-rgb: 230, 0, 18;
+      --color-bg-light: #FFFFFF;     /* 主背景纯白 */
+      --color-card-bg: #F4F5F7;      /* 灰底卡片背景 */
+      --color-border: #E5E7EB;       /* 卡片边框与线段 */
+      --color-text-primary: #1A1A1A; /* 标题与加粗正文 */
+      --color-text-secondary: #555555; /* 副标题与常规正文 */
+      --color-text-light: #FFFFFF;   /* 红色背景下的白字 */
+    }
+
+    /* ==============================================================================
+       2. 基础重置与画布比例控制 (16:9 Fit Canvas)
+       ============================================================================== */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #E5E7EB;
+      color: var(--color-text-primary);
+      font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", Arial, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* 物理 16:9 画布容器 */
+    #deck-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      overflow: hidden;
+      background: #D1D5DB;
+    }
+
+    #deck {
+      width: 1920px;
+      height: 1080px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(1);
+      transform-origin: center center;
+      transition: transform 0.1s ease;
+      background: var(--color-bg-light);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+    }
+
+    /* ==============================================================================
+       3. 幻灯片切换逻辑与过渡 (Slide Transition)
+       ============================================================================== */
+    .slide {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      visibility: hidden;
+      padding: 60px 80px 40px 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: var(--color-bg-light);
+      transition: opacity 0.4s ease-in-out, visibility 0.4s;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* 入场动画 */
+    .slide.active .animate-fade-up {
+      animation: slideFadeUp 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    }
+
+    @keyframes slideFadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ==============================================================================
+       4. 官方标头与水印 (Official Header & Watermark)
+       ============================================================================== */
+    .slide-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 25px;
+      position: relative;
+    }
+
+    .slide-title-area {
+      display: flex;
+      flex-direction: column;
+    }
+
+    h1.slide-title {
+      font-size: 40px;
+      font-weight: 700;
+      color: var(--color-primary);
+      line-height: 1.2;
+      margin-bottom: 4px;
+      letter-spacing: 0.02em;
+    }
+
+    .slide-category {
+      font-size: 18px;
+      color: var(--color-text-secondary);
+      font-weight: 400;
+    }
+
+    /* 红灰色标题底部分割线 */
+    .title-divider {
+      position: absolute;
+      bottom: -10px;
+      left: 0;
+      width: 400px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary) 40%, var(--color-border) 40%, var(--color-border) 100%);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    /* 机密标记红框 */
+    .confidential-box {
+      border: 1px solid var(--color-primary);
+      color: var(--color-primary);
+      font-size: 14px;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 3px;
+      letter-spacing: 0.05em;
+    }
+
+    /* ==============================================================================
+       5. SVG 矢量企业 Logo 与奥运五环 (Corporate Logo SVG)
+       ============================================================================== */
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* ==============================================================================
+       6. 各种版式布局组件 (Slide Layouts)
+       ============================================================================== */
+    /* 模块红色大横幅标题 */
+    .section-banner {
+      background: var(--color-primary);
+      color: var(--color-text-light);
+      font-size: 24px;
+      font-weight: 700;
+      padding: 10px 24px;
+      border-radius: 4px;
+      margin-bottom: 25px;
+      text-align: left;
+      letter-spacing: 0.05em;
+    }
+
+    /* 浅灰圆角卡片 */
+    .gray-card {
+      background: var(--color-card-bg);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      padding: 30px;
+      height: 100%;
+    }
+
+    /* 左右双栏 */
+    .grid-2-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      flex-grow: 1;
+      align-items: stretch;
+      margin-bottom: 20px;
+    }
+
+    /* 3列指标矩阵 */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 30px;
+      flex-grow: 1;
+      margin-bottom: 20px;
+    }
+
+    /* 痛点 L4-L5 列表 */
+    .bullet-list {
+      list-style: none;
+    }
+
+    .bullet-list li {
+      position: relative;
+      padding-left: 24px;
+      margin-bottom: 20px;
+      font-size: 20px;
+      line-height: 1.5;
+      color: var(--color-text-primary);
+    }
+
+    .bullet-list li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 10px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--color-primary);
+    }
+
+    .bullet-list li .l5-desc {
+      display: block;
+      font-size: 16px;
+      color: var(--color-text-secondary);
+      margin-top: 4px;
+    }
+
+    /* ==============================================================================
+       7. 时间轴与功能线框图组件 (Visual Elements)
+       ============================================================================== */
+    /* 阶段时间轴 */
+    .timeline-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      position: relative;
+      margin-top: 50px;
+      padding: 0 40px;
+    }
+
+    .timeline-line {
+      position: absolute;
+      top: 25px;
+      left: 100px;
+      right: 100px;
+      height: 4px;
+      background: var(--color-border);
+      z-index: 1;
+    }
+
+    .timeline-progress {
+      position: absolute;
+      top: 25px;
+      left: 100px;
+      width: 50%;
+      height: 4px;
+      background: var(--color-primary);
+      z-index: 2;
+    }
+
+    .timeline-node {
+      position: relative;
+      z-index: 3;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 250px;
+      text-align: center;
+    }
+
+    .timeline-dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      border: 4px solid var(--color-border);
+      margin-bottom: 15px;
+      transition: border-color 0.3s, background-color 0.3s;
+    }
+
+    .timeline-node.active .timeline-dot {
+      background: var(--color-primary);
+      border-color: var(--color-primary);
+      box-shadow: 0 0 10px rgba(230, 0, 18, 0.4);
+    }
+
+    .timeline-node.active h3 {
+      color: var(--color-primary);
+    }
+
+    /* 线框图容器 */
+    .ui-mockup {
+      background: #FFFFFF;
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      width: 100%;
+      height: 100%;
+      min-height: 420px;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
+
+    .mockup-header {
+      width: 100%;
+      border-bottom: 1px solid var(--color-border);
+      display: flex;
+      align-items: center;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+    }
+
+    .mockup-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #CCCCCC;
+      margin-right: 8px;
+    }
+
+    .mockup-body {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    /* ==============================================================================
+       8. 双栏分割封面与过场页 (Cover & Transition Pages)
+       ============================================================================== */
+    /* 封面页容器 */
+    .cover-slide {
+      padding: 0 !important;
+      background: var(--color-bg-light);
+      position: relative;
+      display: flex;
+      flex-direction: row !important;
+      overflow: hidden;
+    }
+
+    /* 封面左侧红色块 */
+    .cover-left {
+      width: 65%;
+      height: 100%;
+      background: var(--color-primary);
+      color: var(--color-text-light);
+      padding: 100px 80px 100px 100px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      z-index: 5;
+    }
+
+    /* 封面中间的斜弯曲线 */
+    .cover-curve {
+      position: absolute;
+      top: 0;
+      left: 65%;
+      width: 15%;
+      height: 100%;
+      z-index: 4;
+    }
+
+    /* 封面右侧图片区 */
+    .cover-right {
+      width: 35%;
+      height: 100%;
+      background: #E5E7EB;
+      position: relative;
+      z-index: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    /* 建筑示意大图占位 */
+    .building-placeholder {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #e5e7eb 0%, #cbd5e1 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: #94a3b8;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .building-outline {
+      width: 150px;
+      height: 250px;
+      border: 3px double #94a3b8;
+      border-bottom: none;
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    .building-outline::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 220px;
+      height: 4px;
+      background: #94a3b8;
+    }
+
+    /* 过渡页 (Transition Slide) */
+    .transition-slide {
+      background: var(--color-bg-light);
+      display: flex;
+      flex-direction: row !important;
+      align-items: center;
+      justify-content: center;
+      padding: 0 100px !important;
+    }
+
+    .transition-t-logo {
+      display: flex;
+      align-items: center;
+      gap: 30px;
+    }
+
+    .t-vertical-line {
+      width: 2px;
+      height: 140px;
+      background: var(--color-border);
+    }
+
+    .transition-title {
+      font-size: 56px;
+      font-weight: 700;
+      color: var(--color-primary);
+    }
+
+    /* ==============================================================================
+       9. 页脚与全局控制 (Footer & Global Controls)
+       ============================================================================== */
+    .slide-footer {
+      border-top: 1px solid var(--color-border);
+      height: 50px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      color: var(--color-text-secondary);
+      margin-top: 20px;
+    }
+
+    /* 快捷导航指示器 (底部细红线) */
+    #progress-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 4px;
+      background: var(--color-primary);
+      width: 0%;
+      transition: width 0.3s ease-out;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="deck-container">
+    <div id="deck">
+
+      <!-- ==========================================
+           1. 封面页 (Title Slide) - 经典红白分割比例
+           ========================================== -->
+      <div class="slide cover-slide active">
+        <!-- 左侧红底 -->
+        <div class="cover-left animate-fade-up">
+          <!-- Logo 水印区 -->
+          <div class="logo-container">
+            <!-- TCL 文字 Logo (SVG) -->
+            <svg width="100" height="24" viewBox="0 0 162 38" fill="#FFFFFF">
+              <path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/>
+            </svg>
+            <div style="width: 1px; height: 20px; background: rgba(255,255,255,0.4); margin: 0 10px;"></div>
+            <!-- 奥运五环 (SVG) -->
+            <svg width="65" height="24" viewBox="0 0 120 50">
+              <circle cx="20" cy="20" r="11" stroke="#FFFFFF" fill="none" stroke-width="2.5"/>
+              <circle cx="48" cy="20" r="11" stroke="#FFFFFF" fill="none" stroke-width="2.5"/>
+              <circle cx="76" cy="20" r="11" stroke="#FFFFFF" fill="none" stroke-width="2.5"/>
+              <circle cx="34" cy="31" r="11" stroke="#FFFFFF" fill="none" stroke-width="2.5"/>
+              <circle cx="62" cy="31" r="11" stroke="#FFFFFF" fill="none" stroke-width="2.5"/>
+            </svg>
+            <div style="font-size: 11px; font-weight: 400; opacity: 0.8; letter-spacing: 0.1em; margin-left: 5px;">奥林匹克全球合作伙伴</div>
+          </div>
+          
+          <!-- 中部主标题 (L1 - L2) -->
+          <div>
+            <h1 style="font-size: 60px; font-weight: 700; margin-bottom: 20px; line-height: 1.15; letter-spacing: 0.02em;">
+              【内外销】ORL项目画质方案概要
+            </h1>
+            <div style="font-size: 24px; font-weight: 400; opacity: 0.9; border-left: 4px solid #FFFFFF; padding-left: 15px;">
+              实现局部背光与白平衡自适应调优，提升用户观影沉浸感
+            </div>
+          </div>
+          
+          <!-- 底部发布信息 -->
+          <div style="font-size: 16px; opacity: 0.8; display: flex; gap: 40px;">
+            <div>发表团队: <b>产品规划部</b></div>
+            <div>日期: <b>2026年7月9日</b></div>
+            <div>作者: <b>杨帅</b></div>
+          </div>
+        </div>
+        
+        <!-- 斜线过渡切角 -->
+        <svg class="cover-curve" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path d="M0,0 L100,0 C65,30 35,70 0,100 Z" fill="#E60012"/>
+        </svg>
+
+        <!-- 右侧建筑插图 -->
+        <div class="cover-right">
+          <div class="building-placeholder">
+            <div class="building-outline">
+              <div style="position: absolute; top: 30px; left: 30px; width: 90px; height: 4px; background: #cbd5e1;"></div>
+              <div style="position: absolute; top: 60px; left: 30px; width: 90px; height: 4px; background: #cbd5e1;"></div>
+              <div style="position: absolute; top: 90px; left: 30px; width: 90px; height: 4px; background: #cbd5e1;"></div>
+              <div style="position: absolute; top: 120px; left: 30px; width: 90px; height: 4px; background: #cbd5e1;"></div>
+              <div style="position: absolute; top: 150px; left: 30px; width: 90px; height: 4px; background: #cbd5e1;"></div>
+              <div style="position: absolute; top: 180px; left: 30px; width: 90px; height: 4px; background: #cbd5e1;"></div>
+              <!-- TCL 红标 -->
+              <div style="position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: var(--color-primary); color: #FFFFFF; font-size: 8px; font-weight: bold; padding: 2px 5px; border-radius: 2px;">TCL</div>
+            </div>
+            <div style="font-size: 16px; font-weight: bold;">TCL 研发大楼</div>
+            <div style="font-size: 12px; margin-top: 5px;">[ 官方画质评测中心 ]</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           2. 过渡页 / 章节过场 (Transition Slide)
+           ========================================== -->
+      <div class="slide transition-slide">
+        <!-- 右上角水印 -->
+        <div style="position: absolute; top: 40px; right: 80px; display: flex; align-items: center; gap: 15px;">
+          <div class="confidential-box">机密材料，请勿外传</div>
+          <svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012">
+            <path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/>
+          </svg>
+        </div>
+
+        <div class="transition-t-logo animate-fade-up">
+          <!-- TCL 经典红白 T 字图 -->
+          <svg width="120" height="120" viewBox="0 0 120 120">
+            <rect width="120" height="120" rx="16" fill="transparent"/>
+            <!-- T 字形 -->
+            <path d="M 15,30 L 105,30 L 105,58 L 72,58 L 72,100 L 48,100 L 48,58 L 15,58 Z" fill="#E60012"/>
+          </svg>
+          <div class="t-vertical-line"></div>
+          <div class="transition-title">第一部分：拍照偏色校准方案</div>
+        </div>
+        
+        <div style="position: absolute; bottom: 40px; right: 80px; font-size: 18px; color: var(--color-text-secondary);">02</div>
+      </div>
+
+      <!-- ==========================================
+           3. 内容页: 痛点与背景分析 (Split Layout)
+           ========================================== -->
+      <div class="slide">
+        <!-- 头部 -->
+        <div class="slide-header">
+          <div class="slide-title-area">
+            <h1 class="slide-title">拍照偏色校准方案</h1>
+            <span class="slide-category">产品方案</span>
+          </div>
+          <div class="title-divider"></div>
+          <div class="header-right">
+            <div class="confidential-box">机密材料，请勿外传</div>
+            <!-- TCL Logo + Olympic Logo -->
+            <div class="logo-container">
+              <svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012">
+                <path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/>
+              </svg>
+              <svg width="45" height="17" viewBox="0 0 120 50">
+                <circle cx="20" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="48" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="76" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="34" cy="31" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="62" cy="31" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-banner">当前现状</div>
+
+        <div class="grid-2-col animate-fade-up">
+          <!-- 左侧文字区域 -->
+          <div class="gray-card" style="display: flex; flex-direction: column; justify-content: center;">
+            <ul class="bullet-list">
+              <li>
+                <b>现象：大V评测拍摄偏色</b>
+                <span class="l5-desc">当前SQD电视大V在通过摄像机进行评测拍摄时，由于显示光谱与摄像机Sensor响应不匹配，导致拍摄画面出现偏红、偏暖现象，无法真实反映终端显示效果。</span>
+              </li>
+              <li>
+                <b>原因：背光光谱与Sensor响应偏差</b>
+                <span class="l5-desc">SQD背光采用窄带光谱，与摄像机Sensor的RGB通道响应存在偏差，通用AWB算法无法针对SQD光谱进行有效补偿，导致白平衡漂移。</span>
+              </li>
+              <li>
+                <b>影响：影响画质口碑</b>
+                <span class="l5-desc">大V评测视频中画面与实际不一致，严重影响产品画质口碑及品牌形象，急需建立相机色彩校正流程。</span>
+              </li>
+            </ul>
+          </div>
+          
+          <!-- 右侧原图/效果对比模拟 -->
+          <div class="ui-mockup">
+            <div class="mockup-header">
+              <span class="mockup-dot" style="background:#E60012;"></span>
+              <span class="mockup-dot"></span>
+              <span class="mockup-dot"></span>
+              <span style="font-size: 14px; margin-left: 10px; color:#555; font-weight: bold;">画质对比模拟 (SQD Calibration Comparison)</span>
+            </div>
+            <div class="mockup-body">
+              <div style="display: flex; gap: 30px;">
+                <div style="width: 220px; height: 160px; background: #ffebeb; border: 2px solid #ffccd0; border-radius: 8px; display: flex; flex-direction:column; align-items: center; justify-content: center; font-size: 14px; color:#c00;">
+                  <span style="font-weight: bold; font-size: 18px;">校准前 (偏暖色)</span>
+                  <span style="font-size:12px; margin-top:5px; color:#a66;">屏幕泛红、细节缺失</span>
+                </div>
+                <div style="width: 220px; height: 160px; background: #f0fdf4; border: 2px solid #bbf7d0; border-radius: 8px; display: flex; flex-direction:column; align-items: center; justify-content: center; font-size: 14px; color:#15803d;">
+                  <span style="font-weight: bold; font-size: 18px;">校准后 (中性白)</span>
+                  <span style="font-size:12px; margin-top:5px; color:#166534;">白平衡精准、色彩高度还原</span>
+                </div>
+              </div>
+              <div style="margin-top: 30px; font-size: 14px; color:var(--color-text-secondary); max-width:400px;">
+                DEMO展示：<a href="https://yangshuai990529.github.io/trilaser-color-correction-demo/" target="_blank" style="color:var(--color-primary); font-weight: bold; text-decoration:none;">点此访问画质色彩修正在线演示 DEMO</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 页脚 -->
+        <div class="slide-footer">
+          <div>ProductPilot 方案演示</div>
+          <div>03</div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           4. 内容页: 特性列表与工时估算 (Table Layout)
+           ========================================== -->
+      <div class="slide">
+        <!-- 头部 -->
+        <div class="slide-header">
+          <div class="slide-title-area">
+            <h1 class="slide-title">拍照偏色校准方案</h1>
+            <span class="slide-category">产品方案</span>
+          </div>
+          <div class="title-divider"></div>
+          <div class="header-right">
+            <div class="confidential-box">机密材料，请勿外传</div>
+            <div class="logo-container">
+              <svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012">
+                <path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/>
+              </svg>
+              <svg width="45" height="17" viewBox="0 0 120 50">
+                <circle cx="20" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="48" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="76" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="34" cy="31" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="62" cy="31" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-banner">开发工时预估</div>
+
+        <div class="animate-fade-up" style="flex-grow:1; display:flex; flex-direction:column; justify-content:center;">
+          <!-- 经典白底表格，带红色表头 -->
+          <table style="width: 100%; border-collapse: collapse; background: #FFFFFF; font-size: 18px; border: 1px solid var(--color-border); text-align: left;">
+            <thead>
+              <tr style="background: var(--color-primary); color: #FFFFFF;">
+                <th style="padding: 18px 24px; border: 1px solid var(--color-primary);">序号</th>
+                <th style="padding: 18px 24px; border: 1px solid var(--color-primary);">模块（预计）</th>
+                <th style="padding: 18px 24px; border: 1px solid var(--color-primary);">工时与工作量描述</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="background: #FFFFFF; border-bottom: 1px solid var(--color-border);">
+                <td style="padding: 16px 24px; border: 1px solid var(--color-border); font-weight: bold;">1</td>
+                <td style="padding: 16px 24px; border: 1px solid var(--color-border); font-weight: bold;">产品经理 (PM)</td>
+                <td style="padding: 16px 24px; border: 1px solid var(--color-border);"><b>7 人天</b> (负责输出需求概要、跨团队评审、输出白皮书方案与跟进联调)</td>
+              </tr>
+              <tr style="background: var(--color-card-bg); border-bottom: 1px solid var(--color-border);">
+                <td style="padding: 16px 24px; border: 1px solid var(--color-border); font-weight: bold;">2</td>
+                <td style="padding: 16px 24px; border: 1px solid var(--color-border); font-weight: bold;">交互 + 视觉 (UX/UI)</td>
+                <td style="padding: 16px 24px; border: 1px solid var(--color-border);"><b>UX：内销 0.3 人月，外销 0.15 人月</b>；<b>UI：内销 0.5 人月，外销 0.5 人月</b></td>
+              </tr>
+              <tr style="background: #FFFFFF; border-bottom: 1px solid var(--color-border);">
+                <td style="padding: 16px 24px; border: 1px solid var(--color-border); font-weight: bold;">3</td>
+                <td style="padding: 16px 24px; border: 1px solid var(--color-border); font-weight: bold;">设置应用开发 (App)</td>
+                <td style="padding: 16px 24px; border: 1px solid var(--color-border);"><b>内外销共计 0.75 人月</b> (负责上层控制菜单开发与 U 盘校准文件导入接口)</td>
+              </tr>
+              <tr style="background: var(--color-card-bg); border-bottom: 1px solid var(--color-border);">
+                <td style="padding: 16px 24px; border: 1px solid var(--color-border); font-weight: bold;">4</td>
+                <td style="padding: 16px 24px; border: 1px solid var(--color-border); font-weight: bold;">测试团队 (QA)</td>
+                <td style="padding: 16px 24px; border: 1px solid var(--color-border);"><b>1 人月 (涉及 2 个软硬件迭代版本)</b> (涵盖色彩一致性测试、暗场多角度漏光偏差校验)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 页脚 -->
+        <div class="slide-footer">
+          <div>ProductPilot 方案演示</div>
+          <div>04</div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           5. 封底页 (Thank You Slide) - 品牌红白立意
+           ========================================== -->
+      <div class="slide cover-slide" style="justify-content: center; align-items: center;">
+        <!-- 左侧红底 -->
+        <div class="cover-left animate-fade-up" style="width: 50%;">
+          <div class="logo-container">
+            <svg width="100" height="24" viewBox="0 0 162 38" fill="#FFFFFF">
+              <path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/>
+            </svg>
+          </div>
+          <div style="margin-top: 60px;">
+            <h2 style="font-size: 72px; font-weight: 700; margin-bottom: 20px;">THANK YOU</h2>
+            <div style="font-size: 24px; font-weight: 400; opacity: 0.9; letter-spacing: 0.05em;">领先科技 和合共生</div>
+            <div style="font-size: 16px; opacity: 0.7; margin-top: 10px; font-family: monospace;">Building a Sustainable & Connected Future</div>
+          </div>
+          <div style="font-size: 14px; opacity: 0.6;">www.tcl.com</div>
+        </div>
+
+        <!-- 中间分割斜线 -->
+        <svg class="cover-curve" viewBox="0 0 100 100" preserveAspectRatio="none" style="left: 50%; width: 15%;">
+          <path d="M0,0 L100,0 C65,30 35,70 0,100 Z" fill="#E60012"/>
+        </svg>
+
+        <!-- 右侧白底大文字 -->
+        <div style="width: 50%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; padding-left: 150px; background: #FFFFFF;">
+          <h3 style="font-size: 48px; color: var(--color-primary); font-weight: 700; margin-bottom: 20px;">画质方案概要汇报</h3>
+          <p style="font-size: 20px; color: var(--color-text-secondary); max-width: 400px; line-height: 1.6;">
+            感谢各位领导和评审专家的指导与支持。如有任何疑问，请随时联系我们。
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 底部红色进度条 -->
+  <div id="progress-bar"></div>
+
+  <!-- ==============================================================================
+       10. 控制逻辑 (JavaScript Slides Engine)
+       ============================================================================== -->
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const progressBar = document.getElementById('progress-bar');
+    let currentSlideIndex = 0;
+
+    function showSlide(index) {
+      if (index < 0 || index >= slides.length) return;
+      
+      // 更新状态类
+      slides.forEach((slide, idx) => {
+        slide.classList.toggle('active', idx === index);
+      });
+      
+      currentSlideIndex = index;
+      
+      // 更新页脚的进度条
+      const progressPercent = ((index + 1) / slides.length) * 100;
+      progressBar.style.width = `${progressPercent}%`;
+    }
+
+    // 键盘监听事件
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'ArrowDown') {
+        // 下一页
+        if (currentSlideIndex < slides.length - 1) {
+          showSlide(currentSlideIndex + 1);
+        }
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        // 上一页
+        if (currentSlideIndex > 0) {
+          showSlide(currentSlideIndex - 1);
+        }
+      } else if (e.key === 'Home') {
+        // 返回首页
+        showSlide(0);
+      }
+    });
+
+    // 窗口尺寸自适应缩放机制 (16:9 Scale)
+    function scaleDeck() {
+      const deck = document.getElementById('deck');
+      const winW = window.innerWidth;
+      const winH = window.innerHeight;
+      const baseW = 1920;
+      const baseH = 1080;
+
+      // 缩放比例取宽度比例和高度比例中的最小值
+      const scale = Math.min(winW / baseW, winH / baseH);
+      deck.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    }
+
+    window.addEventListener('resize', scaleDeck);
+    
+    // 初始化运行
+    scaleDeck();
+    showSlide(0);
+  </script>
+</body>
+</html>

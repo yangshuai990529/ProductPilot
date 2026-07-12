@@ -7,6 +7,7 @@
 ```
 templates/
 ├── README.md                 # 本文档
+├── html-presentation/        # [NEW] 高还原 HTML/CSS 网页幻灯片模板
 ├── product-proposal/         # 通用产品立项方案模板
 ├── ai-proposal/              # AI/Agent 产品方案模板
 ├── pq-proposal/              # 画质 (Picture Quality) 产品方案模板

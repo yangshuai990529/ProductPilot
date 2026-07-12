@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>画质技术洞察报告 - ProductPilot</title>
+  <style>
+    /* ==============================================================================
+       1. 设计系统变量 (Design System Variables) - TCL 官方白底风格
+       ============================================================================== */
+    :root {
+      --color-primary: #E60012;
+      --color-primary-rgb: 230, 0, 18;
+      --color-primary-light: #FFE5E8;
+      --color-bg-light: #FFFFFF;
+      --color-card-bg: #F4F5F7;
+      --color-card-bg-alt: #FAFBFC;
+      --color-border: #E5E7EB;
+      --color-border-dark: #D1D5DB;
+      --color-text-primary: #1A1A1A;
+      --color-text-secondary: #555555;
+      --color-text-tertiary: #888888;
+      --color-text-light: #FFFFFF;
+      --color-accent-blue: #2563EB;
+      --color-accent-green: #059669;
+      --color-accent-amber: #D97706;
+    }
+
+    /* ==============================================================================
+       2. 基础重置与画布比例控制 (16:9 Fit Canvas)
+       ============================================================================== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: #E5E7EB;
+      color: var(--color-text-primary);
+      font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", Arial, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #deck-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      overflow: hidden;
+      background: #D1D5DB;
+    }
+
+    #deck {
+      width: 1920px;
+      height: 1080px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(1);
+      transform-origin: center center;
+      transition: transform 0.1s ease;
+      background: var(--color-bg-light);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+    }
+
+    /* ==============================================================================
+       3. 幻灯片切换逻辑 (Slide Transition)
+       ============================================================================== */
+    .slide {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      visibility: hidden;
+      padding: 50px 80px 30px 80px;
+      display: flex;
+      flex-direction: column;
+      background: var(--color-bg-light);
+      transition: opacity 0.4s ease-in-out, visibility 0.4s;
+    }
+    .slide.active { opacity: 1; visibility: visible; }
+    .slide.active .animate-fade-up { animation: slideFadeUp 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+    .slide-header { flex: 0 0 auto; }
+    .slide-footer { flex: 0 0 auto; margin-top: auto; }
+    .slide-body { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+
+    @keyframes slideFadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ==============================================================================
+       4. 官方标头与水印 (Official Header)
+       ============================================================================== */
+    .slide-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 25px;
+      position: relative;
+    }
+    .slide-title-area { display: flex; flex-direction: column; }
+    h1.slide-title {
+      font-size: 36px;
+      font-weight: 700;
+      color: var(--color-primary);
+      line-height: 1.2;
+      margin-bottom: 4px;
+      letter-spacing: 0.02em;
+    }
+    .slide-category { font-size: 16px; color: var(--color-text-secondary); font-weight: 400; }
+    .title-divider {
+      position: absolute;
+      bottom: -10px;
+      left: 0;
+      width: 400px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary) 40%, var(--color-border) 40%, var(--color-border) 100%);
+    }
+    .header-right { display: flex; align-items: center; gap: 15px; }
+    .confidential-box {
+      border: 1px solid var(--color-primary);
+      color: var(--color-primary);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 3px;
+      letter-spacing: 0.05em;
+    }
+    .logo-container { display: flex; align-items: center; gap: 10px; }
+
+    /* ==============================================================================
+       5. 版式布局组件 (Layouts)
+       ============================================================================== */
+    .section-banner {
+      background: var(--color-primary);
+      color: var(--color-text-light);
+      font-size: 22px;
+      font-weight: 700;
+      padding: 10px 24px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      text-align: left;
+      letter-spacing: 0.05em;
+      flex: 0 0 auto;
+    }
+
+    .gray-card {
+      background: var(--color-card-bg);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      padding: 30px;
+      height: 100%;
+    }
+
+    .grid-2-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      flex-grow: 1;
+      align-items: stretch;
+      margin-bottom: 20px;
+    }
+
+    .grid-3-col {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      flex-grow: 1;
+      margin-bottom: 20px;
+    }
+
+    .grid-4-col {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      flex-grow: 1;
+      margin-bottom: 20px;
+    }
+
+    .bullet-list { list-style: none; }
+    .bullet-list li {
+      position: relative;
+      padding-left: 24px;
+      margin-bottom: 18px;
+      font-size: 18px;
+      line-height: 1.5;
+      color: var(--color-text-primary);
+    }
+    .bullet-list li::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 9px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--color-primary);
+    }
+    .bullet-list li .l5-desc {
+      display: block;
+      font-size: 15px;
+      color: var(--color-text-secondary);
+      margin-top: 4px;
+    }
+
+    /* 痛点卡片 */
+    .pain-point-card {
+      background: var(--color-card-bg);
+      border: 1px solid var(--color-border);
+      border-left: 4px solid var(--color-primary);
+      border-radius: 8px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .pain-point-card .pp-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: var(--color-primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+    .pain-point-card h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--color-text-primary);
+    }
+    .pain-point-card .pp-cause {
+      font-size: 14px;
+      color: var(--color-text-secondary);
+      line-height: 1.5;
+    }
+    .pain-point-card .pp-tag {
+      display: inline-block;
+      font-size: 12px;
+      color: var(--color-primary);
+      background: var(--color-primary-light);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+      width: fit-content;
+    }
+
+    /* HDR格式对比卡片 */
+    .hdr-card {
+      background: var(--color-bg-light);
+      border: 2px solid var(--color-border);
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: border-color 0.3s;
+    }
+    .hdr-card.highlight { border-color: var(--color-primary); }
+    .hdr-card .hdr-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .hdr-card .hdr-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--color-text-primary);
+    }
+    .hdr-card .hdr-badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+    .hdr-card .hdr-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .hdr-card .hdr-row:last-child { border-bottom: none; }
+    .hdr-card .hdr-label { color: var(--color-text-tertiary); }
+    .hdr-card .hdr-value { color: var(--color-text-primary); font-weight: 500; }
+
+    /* 算法流程管线 */
+    .pipeline-container {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      flex-grow: 1;
+      margin-bottom: 20px;
+    }
+    .pipeline-stage {
+      flex: 1;
+      background: var(--color-card-bg);
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+      margin-right: 24px;
+    }
+    .pipeline-stage:last-child { margin-right: 0; }
+    .pipeline-stage::after {
+      content: "";
+      position: absolute;
+      right: -18px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 12px;
+      height: 12px;
+      border-top: 2px solid var(--color-primary);
+      border-right: 2px solid var(--color-primary);
+      transform: translateY(-50%) rotate(45deg);
+      z-index: 2;
+    }
+    .pipeline-stage:last-child::after { display: none; }
+    .pipeline-stage .ps-num {
+      font-size: 12px;
+      color: var(--color-primary);
+      font-weight: 700;
+      letter-spacing: 0.1em;
+    }
+    .pipeline-stage h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--color-text-primary);
+    }
+    .pipeline-stage .ps-desc {
+      font-size: 13px;
+      color: var(--color-text-secondary);
+      line-height: 1.5;
+    }
+    .pipeline-stage .ps-kpi {
+      margin-top: auto;
+      font-size: 12px;
+      color: var(--color-accent-blue);
+      background: #EFF6FF;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+      width: fit-content;
+    }
+
+    /* 校准流程步骤 */
+    .calib-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+    .calib-step-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--color-primary);
+      color: #FFFFFF;
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .calib-step-content h4 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--color-text-primary);
+      margin-bottom: 4px;
+    }
+    .calib-step-content p {
+      font-size: 13px;
+      color: var(--color-text-secondary);
+      line-height: 1.5;
+    }
+
+    /* 对比表格 */
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #FFFFFF;
+      font-size: 16px;
+      border: 1px solid var(--color-border);
+      text-align: center;
+    }
+    .comparison-table thead tr {
+      background: var(--color-primary);
+      color: #FFFFFF;
+    }
+    .comparison-table thead th {
+      padding: 14px 16px;
+      border: 1px solid var(--color-primary);
+      font-weight: 700;
+      font-size: 15px;
+    }
+    .comparison-table tbody td {
+      padding: 12px 16px;
+      border: 1px solid var(--color-border);
+      font-size: 14px;
+    }
+    .comparison-table tbody tr:nth-child(even) { background: var(--color-card-bg); }
+    .comparison-table .col-highlight { background: var(--color-primary-light); font-weight: 600; }
+
+    /* 机会矩阵 */
+    .opportunity-card {
+      background: var(--color-card-bg);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .opportunity-card .oc-priority {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 4px;
+      width: fit-content;
+    }
+    .opportunity-card .oc-priority.p1 { background: var(--color-primary); color: #FFFFFF; }
+    .opportunity-card .oc-priority.p2 { background: var(--color-accent-amber); color: #FFFFFF; }
+    .opportunity-card .oc-priority.p3 { background: var(--color-accent-blue); color: #FFFFFF; }
+    .opportunity-card h3 { font-size: 18px; font-weight: 700; color: var(--color-text-primary); }
+    .opportunity-card p { font-size: 14px; color: var(--color-text-secondary); line-height: 1.5; }
+
+    /* 趋势指标卡 */
+    .trend-card {
+      background: var(--color-card-bg);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .trend-card .tc-label { font-size: 14px; color: var(--color-text-tertiary); }
+    .trend-card .tc-value { font-size: 32px; font-weight: 700; color: var(--color-primary); }
+    .trend-card .tc-unit { font-size: 16px; color: var(--color-text-secondary); font-weight: 400; }
+    .trend-card .tc-desc { font-size: 13px; color: var(--color-text-secondary); line-height: 1.5; margin-top: 4px; }
+    .trend-card .tc-tag {
+      display: inline-block;
+      font-size: 11px;
+      color: var(--color-accent-green);
+      background: #ECFDF5;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      width: fit-content;
+    }
+
+    /* ==============================================================================
+       6. 封面与封底 (Cover & Thank You)
+       ============================================================================== */
+    .cover-slide {
+      padding: 0 !important;
+      background: var(--color-bg-light);
+      position: relative;
+      display: flex;
+      flex-direction: row !important;
+      overflow: hidden;
+    }
+    .cover-left {
+      width: 65%;
+      height: 100%;
+      background: var(--color-primary);
+      color: var(--color-text-light);
+      padding: 100px 80px 100px 100px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      z-index: 5;
+    }
+    .cover-curve {
+      position: absolute;
+      top: 0;
+      left: 65%;
+      width: 15%;
+      height: 100%;
+      z-index: 4;
+    }
+    .cover-right {
+      width: 35%;
+      height: 100%;
+      background: #E5E7EB;
+      position: relative;
+      z-index: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    /* ==============================================================================
+       7. 页脚 (Footer)
+       ============================================================================== */
+    .slide-footer {
+      border-top: 1px solid var(--color-border);
+      height: 50px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--color-text-secondary);
+      margin-top: 10px;
+    }
+    #progress-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 4px;
+      background: var(--color-primary);
+      width: 0%;
+      transition: width 0.3s ease-out;
+      z-index: 10;
+    }
+
+    /* 待验证标签 */
+    .verify-tag {
+      display: inline-block;
+      font-size: 11px;
+      color: var(--color-accent-amber);
+      background: #FFFBEB;
+      border: 1px solid #FDE68A;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-weight: 500;
+      margin-left: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="deck-container">
+    <div id="deck">
+
+      <!-- ==========================================
+           第 1 页: 封面页
+           ========================================== -->
+      <div class="slide cover-slide active">
+        <div class="cover-left animate-fade-up">
+          <div class="logo-container">
+            <svg width="100" height="24" viewBox="0 0 162 38" fill="#FFFFFF">
+              <path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/>
+            </svg>
+            <div style="width: 1px; height: 20px; background: rgba(255,255,255,0.4); margin: 0 10px;"></div>
+            <svg width="65" height="24" viewBox="0 0 120 50">
+              <circle cx="20" cy="20" r="11" stroke="#FFFFFF" fill="none" stroke-width="2.5"/>
+              <circle cx="48" cy="20" r="11" stroke="#FFFFFF" fill="none" stroke-width="2.5"/>
+              <circle cx="76" cy="20" r="11" stroke="#FFFFFF" fill="none" stroke-width="2.5"/>
+              <circle cx="34" cy="31" r="11" stroke="#FFFFFF" fill="none" stroke-width="2.5"/>
+              <circle cx="62" cy="31" r="11" stroke="#FFFFFF" fill="none" stroke-width="2.5"/>
+            </svg>
+            <div style="font-size: 11px; font-weight: 400; opacity: 0.8; letter-spacing: 0.1em; margin-left: 5px;">奥林匹克全球合作伙伴</div>
+          </div>
+
+          <div>
+            <h1 style="font-size: 56px; font-weight: 700; margin-bottom: 20px; line-height: 1.15; letter-spacing: 0.02em;">
+              画质技术洞察报告
+            </h1>
+            <div style="font-size: 22px; font-weight: 400; opacity: 0.9; border-left: 4px solid #FFFFFF; padding-left: 15px; line-height: 1.5;">
+              从 HDR 生态、核心算法到用户体验的全链路画质能力分析
+            </div>
+          </div>
+
+          <div style="font-size: 16px; opacity: 0.8; display: flex; gap: 40px;">
+            <div>发表团队: <b>产品规划部</b></div>
+            <div>日期: <b>2026年7月12日</b></div>
+            <div>版本: <b>V1.0.0</b></div>
+          </div>
+        </div>
+
+        <svg class="cover-curve" viewBox="0 0 100 100" preserveAspectRatio="none">
+          <path d="M0,0 L100,0 C65,30 35,70 0,100 Z" fill="#E60012"/>
+        </svg>
+
+        <div class="cover-right">
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 40px;">
+            <!-- 画质示意 SVG: 分区背光矩阵 -->
+            <svg width="280" height="200" viewBox="0 0 280 200">
+              <rect x="0" y="0" width="280" height="200" rx="8" fill="#1A1A2E"/>
+              <!-- 背光分区网格 -->
+              <g opacity="0.8">
+                <rect x="20" y="20" width="50" height="40" rx="3" fill="#E60012" opacity="0.9"/>
+                <rect x="80" y="20" width="50" height="40" rx="3" fill="#3B0A0A" opacity="0.6"/>
+                <rect x="140" y="20" width="50" height="40" rx="3" fill="#1A1A2E" opacity="0.3"/>
+                <rect x="200" y="20" width="50" height="40" rx="3" fill="#2B0A0A" opacity="0.4"/>
+                <rect x="20" y="70" width="50" height="40" rx="3" fill="#2B0A0A" opacity="0.4"/>
+                <rect x="80" y="70" width="50" height="40" rx="3" fill="#E60012" opacity="0.7"/>
+                <rect x="140" y="70" width="50" height="40" rx="3" fill="#1A1A2E" opacity="0.2"/>
+                <rect x="200" y="70" width="50" height="40" rx="3" fill="#3B0A0A" opacity="0.5"/>
+                <rect x="20" y="120" width="50" height="40" rx="3" fill="#1A1A2E" opacity="0.2"/>
+                <rect x="80" y="120" width="50" height="40" rx="3" fill="#2B0A0A" opacity="0.3"/>
+                <rect x="140" y="120" width="50" height="40" rx="3" fill="#E60012" opacity="0.85"/>
+                <rect x="200" y="120" width="50" height="40" rx="3" fill="#1A1A2E" opacity="0.15"/>
+              </g>
+              <text x="140" y="185" text-anchor="middle" fill="#888" font-size="10" font-family="monospace">Local Dimming Zone Map</text>
+            </svg>
+            <div style="font-size: 16px; font-weight: bold; color: #64748B;">画质分区背光示意</div>
+            <div style="font-size: 12px; color: #94A3B8;">[ ProductPilot 画质评测中心 ]</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           第 2 页: 画质行业现状与趋势
+           ========================================== -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area">
+            <h1 class="slide-title">画质行业现状与趋势</h1>
+            <span class="slide-category">行业洞察</span>
+          </div>
+          <div class="title-divider"></div>
+          <div class="header-right">
+            <div class="confidential-box">机密材料，请勿外传</div>
+            <div class="logo-container">
+              <svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012">
+                <path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/>
+              </svg>
+              <svg width="45" height="17" viewBox="0 0 120 50">
+                <circle cx="20" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="48" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="76" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="34" cy="31" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="62" cy="31" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-banner">核心结论：HDR 内容渗透率持续提升，MiniLED 背光成为中高端电视主流方案</div>
+
+        <div class="grid-4-col animate-fade-up" style=" margin-bottom: 16px;">
+          <div class="trend-card">
+            <div class="tc-label">HDR 内容采用率</div>
+            <div class="tc-value">85%<span class="tc-unit">+</span></div>
+            <div class="tc-tag">↑ 持续增长</div>
+            <div class="tc-desc">主流流媒体平台（Netflix、Disney+、腾讯视频）新内容已普遍支持 HDR10 或 Dolby Vision<span class="verify-tag">待验证</span></div>
+          </div>
+          <div class="trend-card">
+            <div class="tc-label">MiniLED 电视出货占比</div>
+            <div class="tc-value">28%<span class="tc-unit"></span></div>
+            <div class="tc-tag">↑ 快速增长</div>
+            <div class="tc-desc">2025 年全球 MiniLED 电视出货占比预计达 28%，超越 OLED 成中高端首选<span class="verify-tag">待验证</span></div>
+          </div>
+          <div class="trend-card">
+            <div class="tc-label">背光分区数</div>
+            <div class="tc-value">5000<span class="tc-unit">+ 分区</span></div>
+            <div class="tc-tag">↑ 竞争核心</div>
+            <div class="tc-desc">旗舰 MiniLED 电视分区数已突破 5000 区，中端产品普遍达 512–2000 区<span class="verify-tag">待验证</span></div>
+          </div>
+          <div class="trend-card">
+            <div class="tc-label">动态元数据格式</div>
+            <div class="tc-value">2<span class="tc-unit"> 大阵营</span></div>
+            <div class="tc-tag">生态分裂</div>
+            <div class="tc-desc">HDR10+（三星主导）与 Dolby Vision（杜比主导）形成动态元数据两大对立生态</div>
+          </div>
+        </div>
+
+        <div class="grid-2-col animate-fade-up" style="margin-top: 0;  margin-bottom: 12px;">
+          <div class="gray-card" style="padding: 24px;">
+            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 14px; color: var(--color-text-primary);">画质技术演进方向</h3>
+            <ul class="bullet-list" style="font-size: 16px;">
+              <li>静态元数据 → 动态元数据逐帧优化<span class="l5-desc">从 HDR10 全片统一亮度参数，向 HDR10+/Dolby Vision 逐帧动态调优演进</span></li>
+              <li>百级分区 → 千级/万级分区<span class="l5-desc">MiniLED 背光分区数持续翻倍，光晕控制精度大幅提升</span></li>
+            </ul>
+          </div>
+          <div class="gray-card" style="padding: 24px;">
+            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 14px; color: var(--color-text-primary);">用户消费行为变化</h3>
+            <ul class="bullet-list" style="font-size: 16px;">
+              <li>HDR 影音成为用户购机核心决策因子<span class="l5-desc">用户在选购中高端电视时，HDR 支持已列为前三关注指标<span class="verify-tag">待验证</span></span></li>
+              <li>游戏场景对画质提出新要求<span class="l5-desc">可变刷新率（VRR）与 4K 120Hz 输入成为次世代游戏电视刚需</span></li>
+            </ul>
+          </div>
+        </div>
+        
+
+        <div class="slide-footer">
+          <div>ProductPilot 画质洞察 | 数据来源：UHD 联盟规格书、行业公开报告（部分数据待验证）</div>
+          <div>02 / 08</div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           第 3 页: 用户画质体验痛点分析
+           ========================================== -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area">
+            <h1 class="slide-title">用户画质体验痛点分析</h1>
+            <span class="slide-category">用户研究</span>
+          </div>
+          <div class="title-divider"></div>
+          <div class="header-right">
+            <div class="confidential-box">机密材料，请勿外传</div>
+            <div class="logo-container">
+              <svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012">
+                <path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/>
+              </svg>
+              <svg width="45" height="17" viewBox="0 0 120 50">
+                <circle cx="20" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="48" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="76" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="34" cy="31" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="62" cy="31" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-banner">核心结论：暗场光晕、色彩断层与运动模糊是当前用户最核心的三大画质痛点</div>
+
+        <div class="grid-3-col animate-fade-up">
+          <div class="pain-point-card">
+            <div class="pp-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E60012" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <circle cx="12" cy="12" r="4" fill="#E60012" opacity="0.3"/>
+              </svg>
+            </div>
+            <span class="pp-tag">痛点 01</span>
+            <h3>暗场光晕（Bloom/Halo）</h3>
+            <div class="pp-cause">
+              <b>现象：</b>黑夜场景中明亮物体周围出现明显的光晕溢出，如星空中的星星周围泛白。<br><br>
+              <b>原因：</b>局部背光控制（Local Dimming）分区数不足，单个背光区覆盖面积过大，无法精确分离明亮物体与暗场背景。<br><br>
+              <b>影响：</b>对比度感知大幅下降，用户观影沉浸感受到严重干扰。
+            </div>
+          </div>
+
+          <div class="pain-point-card">
+            <div class="pp-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E60012" stroke-width="2">
+                <rect x="3" y="6" width="18" height="12" rx="2"/>
+                <line x1="7" y1="6" x2="7" y2="18"/>
+                <line x1="11" y1="6" x2="11" y2="18"/>
+                <line x1="15" y1="6" x2="15" y2="18"/>
+              </svg>
+            </div>
+            <span class="pp-tag">痛点 02</span>
+            <h3>色彩断层（Color Banding）</h3>
+            <div class="pp-cause">
+              <b>现象：</b>天空、日落等大面积渐变场景中出现明显的色彩条纹分层，而非平滑过渡。<br><br>
+              <b>原因：</b>8-bit 色深面板仅能呈现 1670 万色，在大面积渐变区域无法避免量化误差；10-bit 面板可呈现 10.7 亿色，可彻底消除断层。<br><br>
+              <b>影响：</b>画面真实感受到严重破坏，用户易产生"廉价感"认知。
+            </div>
+          </div>
+
+          <div class="pain-point-card">
+            <div class="pp-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E60012" stroke-width="2">
+                <path d="M2 12 Q6 4, 10 12 T18 12 T22 12"/>
+                <path d="M2 12 Q6 20, 10 12 T18 12 T22 12" opacity="0.4"/>
+              </svg>
+            </div>
+            <span class="pp-tag">痛点 03</span>
+            <h3>运动模糊与抖动</h3>
+            <div class="pp-cause">
+              <b>现象：</b>体育赛事、动作电影中快速运动物体出现拖影或画面抖动（Judder）。<br><br>
+              <b>原因：</b>电影源帧率（24 fps）与大屏刷新率（60/120 Hz）不匹配，且运动补偿（MEMC）算法未开启或插帧精度不足。<br><br>
+              <b>影响：</b>动态场景清晰度骤降，长时间观看易产生视觉疲劳。
+            </div>
+          </div>
+        </div>
+
+        <div class="gray-card animate-fade-up" style=" padding: 20px 30px; margin-bottom: 0;">
+          <div style="display: flex; align-items: center; gap: 20px;">
+            <div style="font-size: 14px; font-weight: 700; color: var(--color-primary); white-space: nowrap;">因果推演链</div>
+            <div style="display: flex; align-items: center; gap: 12px; font-size: 15px; color: var(--color-text-secondary); flex-wrap: wrap;">
+              <span style="background: var(--color-primary-light); padding: 4px 12px; border-radius: 4px; color: var(--color-primary); font-weight: 600;">面板硬件限制</span>
+              <span style="color: var(--color-text-tertiary);">→</span>
+              <span style="background: #FEF3C7; padding: 4px 12px; border-radius: 4px; color: var(--color-accent-amber); font-weight: 600;">算法精度不足</span>
+              <span style="color: var(--color-text-tertiary);">→</span>
+              <span style="background: #EFF6FF; padding: 4px 12px; border-radius: 4px; color: var(--color-accent-blue); font-weight: 600;">用户感知异常</span>
+              <span style="color: var(--color-text-tertiary);">→</span>
+              <span style="background: #ECFDF5; padding: 4px 12px; border-radius: 4px; color: var(--color-accent-green); font-weight: 600;">产品优化机会</span>
+            </div>
+          </div>
+        </div>
+        
+
+        <div class="slide-footer">
+          <div>ProductPilot 画质洞察 | 痛点数据基于行业通用画质评测标准分析</div>
+          <div>03 / 08</div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           第 4 页: HDR 生态全景解析
+           ========================================== -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area">
+            <h1 class="slide-title">HDR 生态全景解析</h1>
+            <span class="slide-category">技术标准</span>
+          </div>
+          <div class="title-divider"></div>
+          <div class="header-right">
+            <div class="confidential-box">机密材料，请勿外传</div>
+            <div class="logo-container">
+              <svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012">
+                <path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/>
+              </svg>
+              <svg width="45" height="17" viewBox="0 0 120 50">
+                <circle cx="20" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="48" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="76" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="34" cy="31" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="62" cy="31" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-banner">核心结论：四大 HDR 格式在元数据机制、亮度范围与兼容性上存在显著差异</div>
+
+        <div class="grid-4-col animate-fade-up">
+          <div class="hdr-card">
+            <div class="hdr-header">
+              <span class="hdr-name">HDR10</span>
+              <span class="hdr-badge" style="background: #E5E7EB; color: #555;">开放标准</span>
+            </div>
+            <div class="hdr-row"><span class="hdr-label">元数据类型</span><span class="hdr-value">静态（Static）</span></div>
+            <div class="hdr-row"><span class="hdr-label">色深</span><span class="hdr-value">10-bit</span></div>
+            <div class="hdr-row"><span class="hdr-label">峰值亮度</span><span class="hdr-value">1000–4000 nits</span></div>
+            <div class="hdr-row"><span class="hdr-label">色域空间</span><span class="hdr-value">BT.2020</span></div>
+            <div class="hdr-row"><span class="hdr-label">授权费用</span><span class="hdr-value">免费</span></div>
+            <div class="hdr-row"><span class="hdr-label">主要应用</span><span class="hdr-value">流媒体 / UHD 蓝光</span></div>
+            <div style="font-size: 12px; color: var(--color-text-tertiary); margin-top: 4px; line-height: 1.4;">全片使用同一组亮度参数，无法逐场景优化</div>
+          </div>
+
+          <div class="hdr-card">
+            <div class="hdr-header">
+              <span class="hdr-name">HDR10+</span>
+              <span class="hdr-badge" style="background: #FEF3C7; color: #D97706;">三星主导</span>
+            </div>
+            <div class="hdr-row"><span class="hdr-label">元数据类型</span><span class="hdr-value">动态（Dynamic）</span></div>
+            <div class="hdr-row"><span class="hdr-label">色深</span><span class="hdr-value">10-bit</span></div>
+            <div class="hdr-row"><span class="hdr-label">峰值亮度</span><span class="hdr-value">最高 4000 nits</span></div>
+            <div class="hdr-row"><span class="hdr-label">色域空间</span><span class="hdr-value">BT.2020</span></div>
+            <div class="hdr-row"><span class="hdr-label">授权费用</span><span class="hdr-value">免费</span></div>
+            <div class="hdr-row"><span class="hdr-label">主要应用</span><span class="hdr-value">Amazon Prime / 蓝光</span></div>
+            <div style="font-size: 12px; color: var(--color-text-tertiary); margin-top: 4px; line-height: 1.4;">逐帧（Frame-by-Frame）动态元数据，精确优化每场景亮度</div>
+          </div>
+
+          <div class="hdr-card">
+            <div class="hdr-header">
+              <span class="hdr-name">HLG</span>
+              <span class="hdr-badge" style="background: #EFF6FF; color: #2563EB;">广电标准</span>
+            </div>
+            <div class="hdr-row"><span class="hdr-label">元数据类型</span><span class="hdr-value">无（无需元数据）</span></div>
+            <div class="hdr-row"><span class="hdr-label">色深</span><span class="hdr-value">10-bit</span></div>
+            <div class="hdr-row"><span class="hdr-label">峰值亮度</span><span class="hdr-value">1000 nits</span></div>
+            <div class="hdr-row"><span class="hdr-label">色域空间</span><span class="hdr-value">BT.2020</span></div>
+            <div class="hdr-row"><span class="hdr-label">授权费用</span><span class="hdr-value">免费</span></div>
+            <div class="hdr-row"><span class="hdr-label">主要应用</span><span class="hdr-value">广电直播 / 卫星电视</span></div>
+            <div style="font-size: 12px; color: var(--color-text-tertiary); margin-top: 4px; line-height: 1.4;">兼容 SDR 电视，无需额外元数据传输即可向下兼容</div>
+          </div>
+
+          <div class="hdr-card highlight">
+            <div class="hdr-header">
+              <span class="hdr-name">Dolby Vision</span>
+              <span class="hdr-badge" style="background: #E60012; color: #FFFFFF;">杜比主导</span>
+            </div>
+            <div class="hdr-row"><span class="hdr-label">元数据类型</span><span class="hdr-value">动态（Dynamic）</span></div>
+            <div class="hdr-row"><span class="hdr-label">色深</span><span class="hdr-value">12-bit</span></div>
+            <div class="hdr-row"><span class="hdr-label">峰值亮度</span><span class="hdr-value">最高 10000 nits</span></div>
+            <div class="hdr-row"><span class="hdr-label">色域空间</span><span class="hdr-value">BT.2020</span></div>
+            <div class="hdr-row"><span class="hdr-label">授权费用</span><span class="hdr-value">付费授权</span></div>
+            <div class="hdr-row"><span class="hdr-label">主要应用</span><span class="hdr-value">Netflix / Disney+</span></div>
+            <div style="font-size: 12px; color: var(--color-primary); margin-top: 4px; line-height: 1.4; font-weight: 500;">12-bit 色深 + 逐帧动态元数据，画质表现上限最高</div>
+          </div>
+        </div>
+
+        <div class="gray-card animate-fade-up" style=" padding: 20px 30px;">
+          <div style="display: flex; gap: 30px; align-items: center;">
+            <div style="font-size: 15px; font-weight: 700; color: var(--color-primary); white-space: nowrap;">产品启示</div>
+            <ul class="bullet-list" style="display: flex; gap: 30px; flex-wrap: wrap;">
+              <li style="margin-bottom: 0; font-size: 15px;">需同时支持 HDR10 + HLG 作为基础能力<span class="l5-desc" style="display: inline; font-size: 13px;">覆盖 100% 流媒体与广电内容</span></li>
+              <li style="margin-bottom: 0; font-size: 15px;">Dolby Vision 作为高端差异化<span class="l5-desc" style="display: inline; font-size: 13px;">需完成杜比授权与 VSDB 握手配置</span></li>
+              <li style="margin-bottom: 0; font-size: 15px;">HDR10+ 可作为免费替代方案<span class="l5-desc" style="display: inline; font-size: 13px;">免授权费，适合中端产品线</span></li>
+            </ul>
+          </div>
+        </div>
+        
+
+        <div class="slide-footer">
+          <div>ProductPilot 画质洞察 | 数据来源：UHD 联盟规格书、杜比实验室官方文档</div>
+          <div>04 / 08</div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           第 5 页: 核心画质算法架构拆解
+           ========================================== -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area">
+            <h1 class="slide-title">核心画质算法架构拆解</h1>
+            <span class="slide-category">技术架构</span>
+          </div>
+          <div class="title-divider"></div>
+          <div class="header-right">
+            <div class="confidential-box">机密材料，请勿外传</div>
+            <div class="logo-container">
+              <svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012">
+                <path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/>
+              </svg>
+              <svg width="45" height="17" viewBox="0 0 120 50">
+                <circle cx="20" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="48" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="76" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="34" cy="31" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="62" cy="31" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-banner">核心结论：MEMC 运动补偿与 Local Dimming 局部控光是决定大屏画质的两项核心算法</div>
+
+        <!-- 画质处理管线 -->
+        <div class="pipeline-container animate-fade-up">
+          <div class="pipeline-stage">
+            <div class="ps-num">STAGE 01</div>
+            <h3>信号输入与格式检测</h3>
+            <div class="ps-desc">
+              读取 HDMI AVI Infoframe 或流媒体容器元数据，识别输入信号格式（SDR / HDR10 / HLG / Dolby Vision）。
+            </div>
+            <div class="ps-kpi">检测延迟 &lt; 1帧</div>
+          </div>
+          <div class="pipeline-stage">
+            <div class="ps-num">STAGE 02</div>
+            <h3>降噪与细节增强</h3>
+            <div class="ps-desc">
+              空域降噪（Spatial NR）消除单帧随机噪点；时域降噪（Temporal NR）跨帧追踪降噪；自适应锐度增强边缘细节。
+            </div>
+            <div class="ps-kpi">信噪比提升 6dB+</div>
+          </div>
+          <div class="pipeline-stage">
+            <div class="ps-num">STAGE 03</div>
+            <h3>Local Dimming 控光</h3>
+            <div class="ps-desc">
+              分析画面亮暗分布，将背光划分为数百至数千独立分区，逐区调节亮度，实现极高对比度并压低暗场漏光。
+            </div>
+            <div class="ps-kpi">响应 &le; 8ms</div>
+          </div>
+          <div class="pipeline-stage">
+            <div class="ps-num">STAGE 04</div>
+            <h3>MEMC 运动补偿</h3>
+            <div class="ps-desc">
+              通过运动估计（Motion Estimation）与运动补偿（Motion Compensation），将 24/30fps 源提升至 60/120fps，消除抖动与模糊。
+            </div>
+            <div class="ps-kpi">A/V 同步 &le; ±15ms</div>
+          </div>
+          <div class="pipeline-stage">
+            <div class="ps-num">STAGE 05</div>
+            <h3>色彩管理与伽马映射</h3>
+            <div class="ps-desc">
+              基于色彩管理系统（CMS）与目标伽马曲线（BT.1886 / PQ），将色域从源空间精确映射到显示面板色域空间。
+            </div>
+            <div class="ps-kpi">Delta E &le; 2</div>
+          </div>
+        </div>
+
+        <!-- 底部互斥规则 -->
+        <div class="grid-2-col animate-fade-up" style=" margin-bottom: 0;">
+          <div class="gray-card" style="padding: 20px;">
+            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 10px; color: var(--color-primary);">算法互斥规则</h3>
+            <ul class="bullet-list" style="font-size: 14px;">
+              <li style="font-size: 14px; margin-bottom: 8px;">游戏模式开启时，MEMC 自动关闭<span class="l5-desc" style="font-size: 12px;">确保输入延迟（Input Latency）&le; 10ms</span></li>
+              <li style="font-size: 14px; margin-bottom: 0;">Dolby Vision 模式下，禁止用户手动调节色温<span class="l5-desc" style="font-size: 12px;">遵循杜比官方色彩管理规范约束</span></li>
+            </ul>
+          </div>
+          <div class="gray-card" style="padding: 20px;">
+            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 10px; color: var(--color-primary);">性能功耗影响</h3>
+            <ul class="bullet-list" style="font-size: 14px;">
+              <li style="font-size: 14px; margin-bottom: 8px;">MEMC 开启增加约 15–20% SoC 负载<span class="l5-desc" style="font-size: 12px;">需评估整机能效比变化<span class="verify-tag">待验证</span></span></li>
+              <li style="font-size: 14px; margin-bottom: 0;">Local Dimming 强模式增加背光驱动功耗<span class="l5-desc" style="font-size: 12px;">分区数越多，功耗增量越显著</span></li>
+            </ul>
+          </div>
+        </div>
+        
+
+        <div class="slide-footer">
+          <div>ProductPilot 画质洞察 | 数据来源：SoC 画质寄存器基线、HDMI 协议规范</div>
+          <div>05 / 08</div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           第 6 页: 屏幕校准与色彩管理体系
+           ========================================== -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area">
+            <h1 class="slide-title">屏幕校准与色彩管理体系</h1>
+            <span class="slide-category">品质保障</span>
+          </div>
+          <div class="title-divider"></div>
+          <div class="header-right">
+            <div class="confidential-box">机密材料，请勿外传</div>
+            <div class="logo-container">
+              <svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012">
+                <path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/>
+              </svg>
+              <svg width="45" height="17" viewBox="0 0 120 50">
+                <circle cx="20" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="48" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="76" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="34" cy="31" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="62" cy="31" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-banner">核心结论：六步标准校准流程将 Delta E 控制在 1.5 以内，实现出厂画质一致性</div>
+
+        <div class="grid-2-col animate-fade-up">
+          <!-- 左侧：校准流程步骤 -->
+          <div class="gray-card" style="display: flex; flex-direction: column; justify-content: center;">
+            <div class="calib-step">
+              <div class="calib-step-num">1</div>
+              <div class="calib-step-content">
+                <h4>环境与设备准备</h4>
+                <p>电视预热 30 分钟以上，确保面板发光趋于稳定；校准环境光线低于 5 lux（暗室）。</p>
+              </div>
+            </div>
+            <div class="calib-step">
+              <div class="calib-step-num">2</div>
+              <div class="calib-step-content">
+                <h4>暗场基调预设（Pre-setting）</h4>
+                <p>锁定目标伽马曲线（SDR 推荐 Gamma 2.2 或 BT.1886），背光亮度调至目标值（SDR 100–120 nits）。</p>
+              </div>
+            </div>
+            <div class="calib-step">
+              <div class="calib-step-num">3</div>
+              <div class="calib-step-content">
+                <h4>两点白平衡调校（2-Point White Balance）</h4>
+                <p>调整 30% 灰阶（RGB Offset）与 80% 灰阶（RGB Gain），修正高光和暗场色彩偏移。</p>
+              </div>
+            </div>
+            <div class="calib-step">
+              <div class="calib-step-num">4</div>
+              <div class="calib-step-content">
+                <h4>多点灰阶与伽马调校</h4>
+                <p>使用 10/20 点灰阶逐点消除各亮度级别的 RGB Delta E 偏差，确保 Delta E &le; 2。</p>
+              </div>
+            </div>
+            <div class="calib-step">
+              <div class="calib-step-num">5</div>
+              <div class="calib-step-content">
+                <h4>色彩管理系统校正（CMS）</h4>
+                <p>对三原色（RGB）及三辅助色（CMY）的色相、饱和度、亮度进行三维微调。</p>
+              </div>
+            </div>
+            <div class="calib-step">
+              <div class="calib-step-num">6</div>
+              <div class="calib-step-content">
+                <h4>验证与出厂锁定</h4>
+                <p>重新验证整体平均 Delta E &lt; 1.5，将校准数据写入 SoC EEPROM 防止丢失。</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- 右侧：校准目标指标与示意图 -->
+          <div style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- Delta E 指标卡 -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="trend-card" style="padding: 20px;">
+                <div class="tc-label">目标 Delta E（平均）</div>
+                <div class="tc-value" style="font-size: 36px;">&lt; 1.5</div>
+                <div class="tc-tag">出厂标准</div>
+              </div>
+              <div class="trend-card" style="padding: 20px;">
+                <div class="tc-label">目标 Delta E（最大）</div>
+                <div class="tc-value" style="font-size: 36px;">&le; 3.0</div>
+                <div class="tc-tag">单点上限</div>
+              </div>
+            </div>
+
+            <!-- 色域覆盖示意图 -->
+            <div class="gray-card" style=" display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px;">
+              <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--color-text-primary); align-self: flex-start;">色域覆盖目标</h3>
+              <svg width="340" height="260" viewBox="0 0 340 260">
+                <!-- 坐标轴 -->
+                <line x1="30" y1="230" x2="320" y2="230" stroke="#D1D5DB" stroke-width="1"/>
+                <line x1="30" y1="20" x2="30" y2="230" stroke="#D1D5DB" stroke-width="1"/>
+                <text x="310" y="245" fill="#888" font-size="10">x</text>
+                <text x="15" y="25" fill="#888" font-size="10">y</text>
+
+                <!-- BT.2020 色域（外层虚线） -->
+                <polygon points="80,40 300,180 60,200" fill="none" stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="5,3"/>
+                <text x="45" y="55" fill="#94A3B8" font-size="9">BT.2020</text>
+
+                <!-- DCI-P3 色域（中层） -->
+                <polygon points="100,55 280,175 80,195" fill="rgba(37, 99, 235, 0.08)" stroke="#2563EB" stroke-width="1.5"/>
+                <text x="90" y="70" fill="#2563EB" font-size="9">DCI-P3</text>
+
+                <!-- Rec.709 色域（内层） -->
+                <polygon points="130,80 260,170 110,190" fill="rgba(230, 0, 18, 0.08)" stroke="#E60012" stroke-width="1.5"/>
+                <text x="125" y="95" fill="#E60012" font-size="9">Rec.709</text>
+
+                <!-- 目标覆盖率标注 -->
+                <text x="180" y="130" text-anchor="middle" fill="#1A1A1A" font-size="11" font-weight="bold">DCI-P3</text>
+                <text x="180" y="145" text-anchor="middle" fill="#E60012" font-size="14" font-weight="bold">≥ 95%</text>
+                <text x="180" y="160" text-anchor="middle" fill="#888" font-size="9">目标覆盖率</text>
+              </svg>
+              <div style="font-size: 12px; color: var(--color-text-tertiary); margin-top: 8px;">CIE 色域图：Rec.709 ⊂ DCI-P3 ⊂ BT.2020</div>
+            </div>
+          </div>
+        </div>
+        
+
+        <div class="slide-footer">
+          <div>ProductPilot 画质洞察 | 数据来源：ISF 认证基准、Calman 自动校准（AutoCal）指南</div>
+          <div>06 / 08</div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           第 7 页: 竞品画质策略对比
+           ========================================== -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area">
+            <h1 class="slide-title">竞品画质策略对比</h1>
+            <span class="slide-category">竞品分析</span>
+          </div>
+          <div class="title-divider"></div>
+          <div class="header-right">
+            <div class="confidential-box">机密材料，请勿外传</div>
+            <div class="logo-container">
+              <svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012">
+                <path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/>
+              </svg>
+              <svg width="45" height="17" viewBox="0 0 120 50">
+                <circle cx="20" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="48" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="76" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="34" cy="31" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="62" cy="31" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-banner">核心结论：各品牌在背光技术路线、HDR 认证与画质芯片策略上存在显著差异化</div>
+
+        <div class="animate-fade-up" style=" display: flex; flex-direction: column; justify-content: center; margin-bottom: 20px;">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th style="width: 14%;">分析维度</th>
+                <th style="width: 16%;">TCL</th>
+                <th style="width: 16%;">Samsung</th>
+                <th style="width: 16%;">Sony</th>
+                <th style="width: 16%;">LG</th>
+                <th style="width: 22%;">结论与启示</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-weight: 700; text-align: left;">背光技术路线</td>
+                <td class="col-highlight">MiniLED（OD Zero）</td>
+                <td>MiniLED（Neo QLED）</td>
+                <td>OLED + MiniLED</td>
+                <td>OLED evo</td>
+                <td style="text-align: left; font-size: 13px;">MiniLED 成中高端共识，OLED 定位旗舰</td>
+              </tr>
+              <tr>
+                <td style="font-weight: 700; text-align: left;">背光分区数（旗舰）</td>
+                <td class="col-highlight">5000+ 区<span class="verify-tag">待验证</span></td>
+                <td>2000+ 区<span class="verify-tag">待验证</span></td>
+                <td>—（OLED 像素级）</td>
+                <td>—（OLED 像素级）</td>
+                <td style="text-align: left; font-size: 13px;">TCL 分区数领先，光晕控制优势明显</td>
+              </tr>
+              <tr>
+                <td style="font-weight: 700; text-align: left;">HDR 格式支持</td>
+                <td class="col-highlight">HDR10 / HLG / DV</td>
+                <td>HDR10 / HLG / HDR10+</td>
+                <td>HDR10 / HLG / DV</td>
+                <td>HDR10 / HLG / DV</td>
+                <td style="text-align: left; font-size: 13px;">三星坚持 HDR10+ 阵营，其余品牌均支持 DV</td>
+              </tr>
+              <tr>
+                <td style="font-weight: 700; text-align: left;">画质芯片</td>
+                <td class="col-highlight">SoC 集成 PQ 引擎</td>
+                <td>Neo AI 画质芯片</td>
+                <td>XR 认知芯片</td>
+                <td>α11 AI 芯片</td>
+                <td style="text-align: left; font-size: 13px;">竞品均布局独立画质芯片，认知 AI 成新方向</td>
+              </tr>
+              <tr>
+                <td style="font-weight: 700; text-align: left;">峰值亮度（旗舰）</td>
+                <td class="col-highlight">5000+ nits<span class="verify-tag">待验证</span></td>
+                <td>4000+ nits<span class="verify-tag">待验证</span></td>
+                <td>2000+ nits<span class="verify-tag">待验证</span></td>
+                <td>2100+ nits<span class="verify-tag">待验证</span></td>
+                <td style="text-align: left; font-size: 13px;">MiniLED 亮度优势显著，TCL 领先</td>
+              </tr>
+              <tr>
+                <td style="font-weight: 700; text-align: left;">游戏画质支持</td>
+                <td class="col-highlight">VRR 144Hz / ALLM</td>
+                <td>VRR 144Hz / ALLM</td>
+                <td>VRR 120Hz / ALLM</td>
+                <td>VRR 144Hz / ALLM</td>
+                <td style="text-align: left; font-size: 13px;">144Hz VRR 已成旗舰标配，游戏画质竞争白热化</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- SWOT 简要 -->
+        <div class="grid-4-col animate-fade-up" style=" margin-bottom: 0;">
+          <div class="gray-card" style="padding: 16px; border-left: 4px solid var(--color-accent-green);">
+            <div style="font-size: 13px; font-weight: 700; color: var(--color-accent-green); margin-bottom: 6px;">S 优势</div>
+            <div style="font-size: 13px; color: var(--color-text-secondary); line-height: 1.4;">MiniLED 分区数与峰值亮度行业领先，性价比优势显著</div>
+          </div>
+          <div class="gray-card" style="padding: 16px; border-left: 4px solid var(--color-danger);">
+            <div style="font-size: 13px; font-weight: 700; color: var(--color-danger); margin-bottom: 6px;">W 劣势</div>
+            <div style="font-size: 13px; color: var(--color-text-secondary); line-height: 1.4;">缺少独立 AI 画质芯片，认知级画质调优能力待补齐</div>
+          </div>
+          <div class="gray-card" style="padding: 16px; border-left: 4px solid var(--color-accent-blue);">
+            <div style="font-size: 13px; font-weight: 700; color: var(--color-accent-blue); margin-bottom: 6px;">O 机会</div>
+            <div style="font-size: 13px; color: var(--color-text-secondary); line-height: 1.4;">AI 画质自适应与内容感知调优存在技术空白可切入</div>
+          </div>
+          <div class="gray-card" style="padding: 16px; border-left: 4px solid var(--color-accent-amber);">
+            <div style="font-size: 13px; font-weight: 700; color: var(--color-accent-amber); margin-bottom: 6px;">T 威胁</div>
+            <div style="font-size: 13px; color: var(--color-text-secondary); line-height: 1.4;">竞品加速布局认知 AI 芯片，可能形成画质体验代差壁垒</div>
+          </div>
+        </div>
+        
+
+        <div class="slide-footer">
+          <div>ProductPilot 画质洞察 | 竞品数据基于各品牌 2025-2026 年旗舰机型公开规格（部分待验证）</div>
+          <div>07 / 08</div>
+        </div>
+      </div>
+
+      <!-- ==========================================
+           第 8 页: 洞察总结与产品机会
+           ========================================== -->
+      <div class="slide">
+        <div class="slide-header">
+          <div class="slide-title-area">
+            <h1 class="slide-title">洞察总结与产品机会</h1>
+            <span class="slide-category">总结与行动</span>
+          </div>
+          <div class="title-divider"></div>
+          <div class="header-right">
+            <div class="confidential-box">机密材料，请勿外传</div>
+            <div class="logo-container">
+              <svg width="70" height="17" viewBox="0 0 162 38" fill="#E60012">
+                <path d="M0 0h51v7.6H29.4v30.4h-7.8V7.6H0V0zm66.1 14.5c0-9.2 7-15.5 16.5-15.5 8.1 0 13.9 4.6 15.6 11.2l-7.2 2c-1.3-4.2-4.6-6.6-8.4-6.6-5.5 0-9 4.1-9 8.9v10c0 4.8 3.5 8.9 9 8.9 3.8 0 7.1-2.4 8.4-6.6l7.2 2c-1.7 6.6-7.5 11.2-15.6 11.2-9.5 0-16.5-6.3-16.5-15.5v-10zm45.9-14.5h7.8v30.4h19.8v7.6h-27.6V0z"/>
+              </svg>
+              <svg width="45" height="17" viewBox="0 0 120 50">
+                <circle cx="20" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="48" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="76" cy="20" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="34" cy="31" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+                <circle cx="62" cy="31" r="11" stroke="#E60012" fill="none" stroke-width="2.5"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-banner">核心结论：智能画质自适应与全链路色彩校准是下一阶段画质产品的核心突破口</div>
+
+        <!-- 核心洞察总结 -->
+        <div class="gray-card animate-fade-up" style=" padding: 24px 30px; margin-bottom: 20px;">
+          <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 14px; color: var(--color-primary);">五项核心洞察</h3>
+          <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px;">
+            <div style="text-align: center;">
+              <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--color-primary); color: #FFFFFF; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px;">1</div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--color-text-primary); line-height: 1.4;">动态元数据<br>取代静态</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--color-primary); color: #FFFFFF; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px;">2</div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--color-text-primary); line-height: 1.4;">分区数竞赛<br>持续升级</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--color-primary); color: #FFFFFF; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px;">3</div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--color-text-primary); line-height: 1.4;">AI 画质芯片<br>成差异化核心</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--color-primary); color: #FFFFFF; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px;">4</div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--color-text-primary); line-height: 1.4;">游戏画质<br>刚需化</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--color-primary); color: #FFFFFF; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px;">5</div>
+              <div style="font-size: 14px; font-weight: 600; color: var(--color-text-primary); line-height: 1.4;">校准一致性<br>影响口碑</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 产品机会矩阵 -->
+        <div class="grid-3-col animate-fade-up" style="margin-bottom: 0;">
+          <div class="opportunity-card" style="border-left: 4px solid var(--color-primary);">
+            <div class="oc-priority p1">P1 · 高优先级</div>
+            <h3>智能画质自适应引擎</h3>
+            <p>构建基于内容类型识别（电影/体育/游戏/新闻）的自动画质参数切换系统，实时调整 MEMC、Local Dimming 强度与色温参数，减少用户手动调节负担。</p>
+            <div style="font-size: 12px; color: var(--color-text-tertiary); margin-top: 4px;">预期价值：用户满意度提升、退货率降低</div>
+          </div>
+          <div class="opportunity-card" style="border-left: 4px solid var(--color-accent-amber);">
+            <div class="oc-priority p2">P2 · 中优先级</div>
+            <h3>全链路色彩校准体系</h3>
+            <p>从出厂校准（Delta E &lt; 1.5）到用户端 U 盘校准文件导入，建立完整的色彩一致性保障流程，支持 Calman AutoCal 自动校准协议。</p>
+            <div style="font-size: 12px; color: var(--color-text-tertiary); margin-top: 4px;">预期价值：大V评测一致性、品牌画质口碑</div>
+          </div>
+          <div class="opportunity-card" style="border-left: 4px solid var(--color-accent-blue);">
+            <div class="oc-priority p3">P3 · 探索方向</div>
+            <h3>AI 画质增强与超分</h3>
+            <p>基于深度学习的低分辨率内容超分辨率（Super Resolution）重建，将 1080p/720p 源实时提升至接近 4K 清晰度，弥补高清内容供给缺口。</p>
+            <div style="font-size: 12px; color: var(--color-text-tertiary); margin-top: 4px;">预期价值：存量内容体验提升、差异化卖点</div>
+          </div>
+        </div>
+        
+
+        <div class="slide-footer">
+          <div>ProductPilot 画质洞察 | 产品规划部 | 2026年7月12日</div>
+          <div>08 / 08</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="progress-bar"></div>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    const progressBar = document.getElementById('progress-bar');
+    let currentSlideIndex = 0;
+
+    function showSlide(index) {
+      if (index < 0 || index >= slides.length) return;
+      slides.forEach((slide, idx) => {
+        slide.classList.toggle('active', idx === index);
+      });
+      currentSlideIndex = index;
+      const progressPercent = ((index + 1) / slides.length) * 100;
+      progressBar.style.width = `${progressPercent}%`;
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'ArrowDown') {
+        if (currentSlideIndex < slides.length - 1) {
+          showSlide(currentSlideIndex + 1);
+        }
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        if (currentSlideIndex > 0) {
+          showSlide(currentSlideIndex - 1);
+        }
+      } else if (e.key === 'Home') {
+        showSlide(0);
+      }
+    });
+
+    function scaleDeck() {
+      const deck = document.getElementById('deck');
+      const winW = window.innerWidth;
+      const winH = window.innerHeight;
+      const baseW = 1920;
+      const baseH = 1080;
+      const scale = Math.min(winW / baseW, winH / baseH);
+      deck.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    }
+
+    window.addEventListener('resize', scaleDeck);
+    scaleDeck();
+    showSlide(0);
+  </script>
+</body>
+</html>
